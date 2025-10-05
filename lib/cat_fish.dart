@@ -1,5 +1,5 @@
 import 'dart:math';
-
+import 'dart:async' as async; // ✅ for the real Dart Timer
 import 'package:flame/game.dart';
 import 'package:flame/components.dart';
 import 'package:flame/camera.dart';
@@ -17,25 +17,48 @@ class CatFish extends FlameGame with HasCollisionDetection {
   HudComponent? _hud;
   ShadowComponent? _persistentShadow;
 
-  // ✅ keep rod as a field so you can manipulate it later
-  SpriteComponent? _rod;
+  SpriteComponent? _rod; // ✅ keep rod as a field
 
   // Game state
-  double _playerWeight = 0.0;
-  final double _levelGoal = 10.0;
-  final double _rodSuccessChance = 0.50;
+  int _currentLevel = 1;
+  int _playerWeight = 0;
+  double _rodSuccessChance = 0.50;
   final Random _random = Random();
   bool _isBobberActive = false;
 
-    
+  // Map of level goals  
+final Map<int, int> _levelGoals = {
+  1: 10, // Level 1 requires 10kg
+  2: 15, // Level 2 requires 15kg
+  3: 20, // Level 3 requires 20kg
+  4: 25, // Level 4 requires 25kg
+  5: 30, // Level 5 requires 30kg
 
-  bool _showModal = true;
+};
+
+// Getter → always gives the right target for the current level
+int get _levelGoal => _levelGoals[_currentLevel] ?? 10;
+
+
+  // Map of rod configs per level
+final Map<int, Map<String, dynamic>> _rodConfigs = {
+  1: { "sprite": "ROD1.png", "chance": 0.50 },
+  2: { "sprite": "ROD2.png", "chance": 0.60 },
+  3: { "sprite": "ROD3.png", "chance": 0.70 },
+  4: { "sprite": "ROD4.png", "chance": 0.80 },
+  5: { "sprite": "ROD5.png", "chance": 0.90 },
+  // keep adding...
+};
+
+
+  // Timer & Game state
+  async.Timer? _countdownTimer;
+  int _timeLeft = 60;
+  bool _isGameRunning = false;
 
   @override
   Future<void> onLoad() async {
     await super.onLoad();
-
- 
 
     // Preload font
     await GoogleFonts.pendingFonts([GoogleFonts.pressStart2p()]);
@@ -69,15 +92,9 @@ class CatFish extends FlameGame with HasCollisionDetection {
     );
     _world.add(character);
 
-    // ✅ Rod (store in class field)
-    _rod = SpriteComponent(
-      sprite: await loadSprite('ROD1.png'),
-      size: Vector2(90, 80),
-      anchor: Anchor.center,
-      position: Vector2(-145, 71), // initial position
-      angle: -0.8,                 // initial angle
-    );
-    _world.add(_rod!);
+    //  Load rod based on current level
+    await _loadRodForLevel(_currentLevel);
+
 
     // Add persistent shadow
     await _createPersistentShadow();
@@ -85,6 +102,46 @@ class CatFish extends FlameGame with HasCollisionDetection {
     // HUD
     _hud = HudComponent();
     _world.add(_hud!);
+
+    // ✅ Show Start overlay at beginning
+    overlays.add('StartMenu');
+  }
+
+  void startGame() {
+    _isGameRunning = true;
+    _timeLeft = 60;
+
+    // ✅ Reset player progress
+    _playerWeight = 0;
+    _hud?.updatePlayerWeight(_playerWeight, _levelGoal);
+    _hud?.updateFillProgress(0.0);
+    _hud?.updateGameTimer(_timeLeft);
+
+    // ✅ Reset rod to initial state
+    _rod?.position = Vector2(-145, 71);
+    _rod?.angle = -0.8;
+
+    // ✅ Cancel any old timer
+    _countdownTimer?.cancel();
+
+    // ✅ Start countdown again
+    _countdownTimer = async.Timer.periodic(const Duration(seconds: 1), (timer) {
+      _timeLeft--;
+      _hud?.updateGameTimer(_timeLeft);
+
+      if (_timeLeft <= 0) {
+        timer.cancel();
+        _endGame();
+      }
+    });
+  }
+
+  // ✅ Handle game end
+  void _endGame() {
+    _isGameRunning = false;
+    if (_playerWeight < _levelGoal) {
+      overlays.add('FailMenu'); // show fail modal
+    }
   }
 
   Future<void> _createPersistentShadow() async {
@@ -98,6 +155,7 @@ class CatFish extends FlameGame with HasCollisionDetection {
   }
 
   void _onShadowTapped(Vector2 tapPosition, ShadowComponent shadow) {
+    if (!_isGameRunning) return;
     if (_isBobberActive) {
       print("⏳ Wait for the current bobber to finish!");
       return;
@@ -128,69 +186,157 @@ class CatFish extends FlameGame with HasCollisionDetection {
     _rod?.angle = -0.3;
   }
 
-  void _attemptCatch() {
-    if (_currentBobber == null) {
-      print("❌ Bobber doesn't exist!");
-      return;
+        void _attemptCatch() {
+        if (!_isGameRunning) return;
+
+        if (_currentBobber == null) {
+          print("❌ Bobber doesn't exist!");
+          return;
+        }
+
+        print("🎣 Attempting to catch fish...");
+        _currentBobber?.removeFromParent();
+        _currentBobber = null;
+        _isBobberActive = false;
+
+        // ✅ Reset rod after catch attempt
+        _rod?.position = Vector2(-145, 71);
+        _rod?.angle = -0.8;
+
+        if (_random.nextDouble() < _rodSuccessChance) {
+          final fishWeight = _generateFishWeight();
+          _playerWeight += fishWeight;
+
+          // Cap to level goal
+          if (_playerWeight > _levelGoal) {
+            _playerWeight = _levelGoal;
+          }
+
+          _hud?.updatePlayerWeight(_playerWeight, _levelGoal);
+          _hud?.updateFillProgress(_playerWeight / _levelGoal);
+          print("✅ SUCCESS! Caught a fish! Weight: ${fishWeight}kg. Total: ${_playerWeight}kg");
+          _persistentShadow?.showFeedback(true, fishWeight.toDouble());
+
+          // ✅ Step 2: Check if level goal is reached
+          if (_playerWeight >= _levelGoal) {
+            print("🏆 Level $_currentLevel Complete!");
+            _countdownTimer?.cancel();   // stop timer
+            _isGameRunning = false;      // stop game loop
+            overlays.add('NextLevelMenu'); // show next level overlay
+            return;
+          }
+
+        } else {
+          print("❌ FAILED! The fish got away!");
+          _persistentShadow?.showFeedback(false);
+        }
+      }
+
+
+   /// ✅ Fish weight generation balanced for Level 1 rod (50% success rate).
+  /// 65% chance → 1kg, 25% → 2kg, 10% → 3kg
+ int _generateFishWeight() {
+  final remainingWeight = _levelGoal - _playerWeight;
+  if (remainingWeight <= 0) return 0;
+
+  final roll = _random.nextDouble();
+  int fishWeight = 1;
+
+  // 🎣 Define weight distributions per level
+  final distributions = {
+    1: [0.65, 0.25, 0.10],        // 65% 1kg, 25% 2kg, 10% 3kg
+    2: [0.50, 0.35, 0.10, 0.05], // 50% 1kg, 35% 2kg, 10% 3kg, 5% 4kg
+    3: [0.40, 0.35, 0.15, 0.10],
+    4: [0.30, 0.30, 0.25, 0.10, 0.05],
+    5: [0.20, 0.25, 0.25, 0.20, 0.10],
+    // Add more levels here...
+  };
+
+  // 🧭 Print debug info when this function runs
+  print('🎮 --- Fish Weight Debug ---');
+  print('🎣 Level: $_currentLevel');
+  print('📊 Fish Weight Distribution: ${distributions[_currentLevel]}');
+  print('🎲 Roll value: ${roll.toStringAsFixed(3)}');
+
+  // Use distribution for current level or fallback
+  final dist = distributions[_currentLevel] ?? distributions[1]!;
+
+  double cumulative = 0;
+  for (int i = 0; i < dist.length; i++) {
+    cumulative += dist[i];
+    if (roll < cumulative) {
+      fishWeight = i + 1; // weight = index + 1
+      break;
     }
+  }
 
-    print("🎣 Attempting to catch fish...");
-    _currentBobber?.removeFromParent();
-    _currentBobber = null;
-    _isBobberActive = false;
+  // 🚫 Prevent overshoot beyond goal
+  if (fishWeight > remainingWeight) {
+    fishWeight = remainingWeight;
+  }
 
-    // ✅ Reset rod after catch attempt
+  // ✅ Print result for clarity
+  print('🐟 Generated fish weight: $fishWeight kg for Level $_currentLevel');
+  print('---------------------------');
+
+  return fishWeight;
+}
+
+
+
+  Future<void> startNextLevel() async {
+    _currentLevel++; // move to next level
+    _playerWeight = 0;
+    _timeLeft = 60;
+    _isGameRunning = true;
+
+     await _loadRodForLevel(_currentLevel);
+
+    // Reset HUD
+    _hud?.updatePlayerWeight(_playerWeight, _levelGoal);
+    _hud?.updateFillProgress(0.0);
+    _hud?.updateGameTimer(_timeLeft);
+
+    // Reset rod
     _rod?.position = Vector2(-145, 71);
     _rod?.angle = -0.8;
 
-    // In _attemptCatch method
-     if (_random.nextDouble() < _rodSuccessChance) {
-  final fishWeight = _generateFishWeight();
-  _playerWeight += fishWeight;
-  _hud?.updatePlayerWeight(_playerWeight, _levelGoal);
-  _hud?.updateFillProgress(_playerWeight / _levelGoal);
-  print("✅ SUCCESS! Caught a fish! Weight: ${fishWeight.toStringAsFixed(1)}kg. Total: ${_playerWeight.toStringAsFixed(1)}kg");
-  _persistentShadow?.showFeedback(true, fishWeight); // Pass fish weight here
-} else {
-  print("❌ FAILED! The fish got away!");
-  _persistentShadow?.showFeedback(false);
+    // Cancel any old timer
+    _countdownTimer?.cancel();
+
+    // Restart countdown
+    _countdownTimer = async.Timer.periodic(const Duration(seconds: 1), (timer) {
+      _timeLeft--;
+      _hud?.updateGameTimer(_timeLeft);
+
+      if (_timeLeft <= 0) {
+        timer.cancel();
+        _endGame();
+      }
+    });
+
+    print("🚀 Level $_currentLevel Started!");
+  }
+
+  Future<void> _loadRodForLevel(int level) async {
+  final config = _rodConfigs[level] ?? _rodConfigs[1]!; // fallback to lvl1
+
+  _rodSuccessChance = config["chance"];
+
+  // If rod already exists, remove it
+  _rod?.removeFromParent();
+
+  // Create new rod sprite
+  _rod = SpriteComponent(
+    sprite: await loadSprite(config["sprite"]),
+    size: Vector2(90, 80),
+    anchor: Anchor.center,
+    position: Vector2(-145, 71),
+    angle: -0.8,
+  );
+
+  _world.add(_rod!);
 }
 
-  }
 
-  double _generateFishWeight() {
-  final remainingWeight = _levelGoal - _playerWeight;
-  
-  // If remaining weight is very small, just return it to reach exactly 10.0kg
-  if (remainingWeight <= 0.1) {
-    return 0.0; // Or return remainingWeight if you want to be precise
-  }
-
-  double fishWeight;
-  final roll = _random.nextDouble();
-  
-  if (remainingWeight <= 0.5) {
-    // If we're very close, just return the remaining weight
-    return remainingWeight;
-  } else if (remainingWeight <= 3.0) {
-    // If remaining weight is small, generate smaller fish
-    fishWeight = _random.nextDouble() * (remainingWeight * 0.8) + (remainingWeight * 0.2);
-  } else {
-    // Normal fish generation
-    if (roll < 0.5) {
-      fishWeight = _random.nextDouble() * 0.7 + 0.5; // 0.5 - 1.2kg
-    } else if (roll < 0.9) {
-      fishWeight = _random.nextDouble() * 1.2 + 1.3; // 1.3 - 2.5kg
-    } else {
-      fishWeight = _random.nextDouble() * 1.5 + 3.0; // 3.0 - 4.5kg
-    }
-    
-    // If this fish would put us over the limit, cap it
-    if (_playerWeight + fishWeight > _levelGoal) {
-      fishWeight = _levelGoal - _playerWeight;
-    }
-  }
-
-  return double.parse(fishWeight.toStringAsFixed(2)); // Round to 2 decimal places
-}
 }
