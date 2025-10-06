@@ -45,9 +45,8 @@ final Map<int, Map<String, dynamic>> _rodConfigs = {
   1: { "sprite": "ROD1.png", "chance": 0.50 },
   2: { "sprite": "ROD2.png", "chance": 0.60 },
   3: { "sprite": "ROD3.png", "chance": 0.70 },
-  4: { "sprite": "ROD4.png", "chance": 0.80 },
-  5: { "sprite": "ROD5.png", "chance": 0.90 },
-  // keep adding...
+  4: { "sprite": "ROD4.png", "chance": 0.75 },
+  5: { "sprite": "ROD5.png", "chance": 0.80 },
 };
 
 
@@ -249,7 +248,6 @@ final Map<int, Map<String, dynamic>> _rodConfigs = {
     3: [0.40, 0.35, 0.15, 0.10],
     4: [0.30, 0.30, 0.25, 0.10, 0.05],
     5: [0.20, 0.25, 0.25, 0.20, 0.10],
-    // Add more levels here...
   };
 
   // 🧭 Print debug info when this function runs
