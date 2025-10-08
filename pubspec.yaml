@@ -22,6 +22,9 @@ dependencies:
   # Flame game engine
   flame: ^1.32.0
   
+  # Audio for Flame
+  flame_audio: ^2.0.5
+  
   # Google Fonts for retro pixel fonts
   google_fonts: ^6.1.0
 
@@ -41,3 +44,4 @@ flutter:
   # Asset folder for images, sprites, etc.
   assets:
     - assets/images/
+    - assets/audio/

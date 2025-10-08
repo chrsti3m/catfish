@@ -9,6 +9,8 @@ import 'components/bobber_component.dart';
 import 'components/hud_component.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'components/user_feedback.dart';
+import 'package:flame_audio/flame_audio.dart';
+
 
 class CatFish extends FlameGame with HasCollisionDetection {
   late final World _world;
@@ -16,6 +18,7 @@ class CatFish extends FlameGame with HasCollisionDetection {
   BobberComponent? _currentBobber;
   HudComponent? _hud;
   ShadowComponent? _persistentShadow;
+  ShadowComponent? _bonusShadow; //  Extra high-chance shadow
 
   SpriteComponent? _rod; // ✅ keep rod as a field
 
@@ -26,34 +29,32 @@ class CatFish extends FlameGame with HasCollisionDetection {
   final Random _random = Random();
   bool _isBobberActive = false;
 
-  // Map of level goals  
-final Map<int, int> _levelGoals = {
-  1: 10, // Level 1 requires 10kg
-  2: 15, // Level 2 requires 15kg
-  3: 20, // Level 3 requires 20kg
-  4: 25, // Level 4 requires 25kg
-  5: 30, // Level 5 requires 30kg
+  // Map of level goals
+  final Map<int, int> _levelGoals = {
+    1: 10, // Level 1 requires 10kg
+    2: 15, // Level 2 requires 15kg
+    3: 20, // Level 3 requires 20kg
+    4: 25, // Level 4 requires 25kg
+    5: 30, // Level 5 requires 30kg
+  };
 
-};
-
-// Getter → always gives the right target for the current level
-int get _levelGoal => _levelGoals[_currentLevel] ?? 10;
-
+  // Getter → always gives the right target for the current level
+  int get _levelGoal => _levelGoals[_currentLevel] ?? 10;
 
   // Map of rod configs per level
-final Map<int, Map<String, dynamic>> _rodConfigs = {
-  1: { "sprite": "ROD1.png", "chance": 0.50 },
-  2: { "sprite": "ROD2.png", "chance": 0.60 },
-  3: { "sprite": "ROD3.png", "chance": 0.70 },
-  4: { "sprite": "ROD4.png", "chance": 0.75 },
-  5: { "sprite": "ROD5.png", "chance": 0.80 },
-};
-
+  final Map<int, Map<String, dynamic>> _rodConfigs = {
+    1: {"sprite": "ROD1.png", "chance": 0.50},
+    2: {"sprite": "ROD2.png", "chance": 0.60},
+    3: {"sprite": "ROD3.png", "chance": 0.70},
+    4: {"sprite": "ROD4.png", "chance": 0.75},
+    5: {"sprite": "ROD5.png", "chance": 0.80},
+  };
 
   // Timer & Game state
   async.Timer? _countdownTimer;
   int _timeLeft = 60;
   bool _isGameRunning = false;
+  bool _audioInitialized = false;
 
   @override
   Future<void> onLoad() async {
@@ -61,6 +62,16 @@ final Map<int, Map<String, dynamic>> _rodConfigs = {
 
     // Preload font
     await GoogleFonts.pendingFonts([GoogleFonts.pressStart2p()]);
+
+    // Preload audio clips
+    await FlameAudio.audioCache.loadAll([
+      'bloop.wav',
+      'splash.wav',
+      'BGMM.mp3',
+    ]);
+
+    // Initialize background music but don't play yet (web browsers require user interaction)
+    FlameAudio.bgm.initialize();
 
     _world = World();
     add(_world);
@@ -94,9 +105,9 @@ final Map<int, Map<String, dynamic>> _rodConfigs = {
     //  Load rod based on current level
     await _loadRodForLevel(_currentLevel);
 
-
     // Add persistent shadow
     await _createPersistentShadow();
+    await _createBonusShadow(); //  Lucky shadow
 
     // HUD
     _hud = HudComponent();
@@ -106,7 +117,19 @@ final Map<int, Map<String, dynamic>> _rodConfigs = {
     overlays.add('StartMenu');
   }
 
+  @override
+  void onRemove() {
+    // Stop background music when game is disposed
+    FlameAudio.bgm.stop();
+    super.onRemove();
+  }
+
+  // Note: Game pause/resume hooks differ per platform; remove unsupported overrides.
+
   void startGame() {
+    // Initialize audio on first user interaction (required for web browsers)
+    _initializeAudioIfNeeded();
+
     _isGameRunning = true;
     _timeLeft = 60;
 
@@ -143,17 +166,46 @@ final Map<int, Map<String, dynamic>> _rodConfigs = {
     }
   }
 
+  // ✅ Initialize audio on first user interaction (required for web browsers)
+  void _initializeAudioIfNeeded() {
+    if (!_audioInitialized) {
+      _audioInitialized = true;
+      // Start background music after user interaction
+      FlameAudio.bgm.play('BGMM.mp3', volume: 0.15);
+    }
+  }
+
   Future<void> _createPersistentShadow() async {
     _persistentShadow = ShadowComponent(
       sprite: await loadSprite('shadow.png'),
       size: Vector2(100, 45),
       position: Vector2(150, 150),
-      onTap: (tapPosition, shadowComponent) => _onShadowTapped(tapPosition, shadowComponent),
+      onTap: (tapPosition, shadowComponent) =>
+          _onShadowTapped(tapPosition, shadowComponent),
     );
     _world.add(_persistentShadow!);
   }
 
+  //bonus shadow
+  Future<void> _createBonusShadow() async {
+    _bonusShadow = ShadowComponent(
+      sprite: await loadSprite(
+        'shadow.png',
+      ), // You can use a different sprite later
+      size: Vector2(100, 45),
+      position: Vector2(
+        50,
+        200,
+      ), //  Move to a different position than main shadow
+      onTap: (tapPosition, shadow) => _onBonusShadowTapped(tapPosition, shadow),
+    );
+    _world.add(_bonusShadow!);
+  }
+
   void _onShadowTapped(Vector2 tapPosition, ShadowComponent shadow) {
+    // Initialize audio on first user interaction (required for web browsers)
+    _initializeAudioIfNeeded();
+
     if (!_isGameRunning) return;
     if (_isBobberActive) {
       print("⏳ Wait for the current bobber to finish!");
@@ -162,6 +214,9 @@ final Map<int, Map<String, dynamic>> _rodConfigs = {
 
     _isBobberActive = true;
     _currentBobber?.removeFromParent();
+
+    // Play bloop sound when casting on a shadow
+    FlameAudio.play('bloop.wav');
 
     _currentBobber = BobberComponent(
       position: shadow.position,
@@ -185,102 +240,171 @@ final Map<int, Map<String, dynamic>> _rodConfigs = {
     _rod?.angle = -0.3;
   }
 
-        void _attemptCatch() {
-        if (!_isGameRunning) return;
+  void _onBonusShadowTapped(Vector2 tapPosition, ShadowComponent shadow) {
+    _initializeAudioIfNeeded();
 
-        if (_currentBobber == null) {
-          print("❌ Bobber doesn't exist!");
-          return;
-        }
+    if (!_isGameRunning) return;
+    if (_isBobberActive) return;
 
-        print("🎣 Attempting to catch fish...");
-        _currentBobber?.removeFromParent();
+    _isBobberActive = true;
+    _currentBobber?.removeFromParent();
+
+    FlameAudio.play('bloop.wav');
+
+    _currentBobber = BobberComponent(
+      position: shadow.position,
+      onWriggleEnd: () {
         _currentBobber = null;
         _isBobberActive = false;
-
-        // ✅ Reset rod after catch attempt
         _rod?.position = Vector2(-145, 71);
         _rod?.angle = -0.8;
+        _bonusShadow?.showFeedback(false);
+      },
+      onTap: (success) => _attemptCatchBonus(success),
+    );
+    _world.add(_currentBobber!);
 
-        if (_random.nextDouble() < _rodSuccessChance) {
-          final fishWeight = _generateFishWeight();
-          _playerWeight += fishWeight;
+    _rod?.position = Vector2(-135, 78);
+    _rod?.angle = -0.3;
+  }
 
-          // Cap to level goal
-          if (_playerWeight > _levelGoal) {
-            _playerWeight = _levelGoal;
-          }
+  void _attemptCatch(bool success) {
+    if (!_isGameRunning || _currentBobber == null) return;
 
-          _hud?.updatePlayerWeight(_playerWeight, _levelGoal);
-          _hud?.updateFillProgress(_playerWeight / _levelGoal);
-          print("✅ SUCCESS! Caught a fish! Weight: ${fishWeight}kg. Total: ${_playerWeight}kg");
-          _persistentShadow?.showFeedback(true, fishWeight.toDouble());
+    // If tap was too early
+    if (!success) {
+      print("Too early! The fish hasn’t bitten yet!");
+      _persistentShadow?.showFeedback(false);
+      _currentBobber?.removeFromParent();
+      _currentBobber = null;
+      _isBobberActive = false;
+      return;
+    }
 
-          // ✅ Step 2: Check if level goal is reached
-          if (_playerWeight >= _levelGoal) {
-            print("🏆 Level $_currentLevel Complete!");
-            _countdownTimer?.cancel();   // stop timer
-            _isGameRunning = false;      // stop game loop
-            overlays.add('NextLevelMenu'); // show next level overlay
-            return;
-          }
+    // ✅ Attempting to catch a fish
+    print("Attempting to catch fish...");
+    _currentBobber?.removeFromParent();
+    _currentBobber = null;
+    _isBobberActive = false;
 
-        } else {
-          print("❌ FAILED! The fish got away!");
-          _persistentShadow?.showFeedback(false);
-        }
+    // Reset rod
+    _rod?.position = Vector2(-145, 71);
+    _rod?.angle = -0.8;
+
+    // Catch logic
+    if (_random.nextDouble() < _rodSuccessChance) {
+      final fishWeight = _generateFishWeight();
+      _playerWeight += fishWeight;
+      if (_playerWeight > _levelGoal) _playerWeight = _levelGoal;
+
+      _hud?.updatePlayerWeight(_playerWeight, _levelGoal);
+      _hud?.updateFillProgress(_playerWeight / _levelGoal);
+
+      print(
+        "SUCCESS! Caught a fish! Weight: ${fishWeight}kg. Total: ${_playerWeight}kg",
+      );
+      _persistentShadow?.showFeedback(true, fishWeight.toDouble());
+
+      if (_playerWeight >= _levelGoal) {
+        _countdownTimer?.cancel();
+        _isGameRunning = false;
+        overlays.add('NextLevelMenu');
       }
-
-
-   /// ✅ Fish weight generation balanced for Level 1 rod (50% success rate).
-  /// 65% chance → 1kg, 25% → 2kg, 10% → 3kg
- int _generateFishWeight() {
-  final remainingWeight = _levelGoal - _playerWeight;
-  if (remainingWeight <= 0) return 0;
-
-  final roll = _random.nextDouble();
-  int fishWeight = 1;
-
-  // 🎣 Define weight distributions per level
-  final distributions = {
-    1: [0.65, 0.25, 0.10],        // 65% 1kg, 25% 2kg, 10% 3kg
-    2: [0.50, 0.35, 0.10, 0.05], // 50% 1kg, 35% 2kg, 10% 3kg, 5% 4kg
-    3: [0.40, 0.35, 0.15, 0.10],
-    4: [0.30, 0.30, 0.25, 0.10, 0.05],
-    5: [0.20, 0.25, 0.25, 0.20, 0.10],
-  };
-
-  // 🧭 Print debug info when this function runs
-  print('🎮 --- Fish Weight Debug ---');
-  print('🎣 Level: $_currentLevel');
-  print('📊 Fish Weight Distribution: ${distributions[_currentLevel]}');
-  print('🎲 Roll value: ${roll.toStringAsFixed(3)}');
-
-  // Use distribution for current level or fallback
-  final dist = distributions[_currentLevel] ?? distributions[1]!;
-
-  double cumulative = 0;
-  for (int i = 0; i < dist.length; i++) {
-    cumulative += dist[i];
-    if (roll < cumulative) {
-      fishWeight = i + 1; // weight = index + 1
-      break;
+    } else {
+      print("FAILED! The fish got away!");
+      _persistentShadow?.showFeedback(false);
     }
   }
 
-  // 🚫 Prevent overshoot beyond goal
-  if (fishWeight > remainingWeight) {
-    fishWeight = remainingWeight;
+  void _attemptCatchBonus(bool success) {
+    if (!_isGameRunning || _currentBobber == null) return;
+
+    if (!success) {
+      _bonusShadow?.showFeedback(false);
+      _currentBobber?.removeFromParent();
+      _currentBobber = null;
+      _isBobberActive = false;
+      return;
+    }
+
+    _currentBobber?.removeFromParent();
+    _currentBobber = null;
+    _isBobberActive = false;
+
+    _rod?.position = Vector2(-145, 71);
+    _rod?.angle = -0.8;
+
+    // 🎯 Give this shadow higher catch success chance
+    double bonusChance = _rodSuccessChance + 0.25; // +25% higher success chance
+    if (bonusChance > 0.95) bonusChance = 0.95; // cap at 95%
+
+    if (_random.nextDouble() < bonusChance) {
+      final fishWeight = _generateFishWeight();
+      _playerWeight += fishWeight;
+      if (_playerWeight > _levelGoal) _playerWeight = _levelGoal;
+
+      _hud?.updatePlayerWeight(_playerWeight, _levelGoal);
+      _hud?.updateFillProgress(_playerWeight / _levelGoal);
+
+      _bonusShadow?.showFeedback(true, fishWeight.toDouble());
+
+      if (_playerWeight >= _levelGoal) {
+        _countdownTimer?.cancel();
+        _isGameRunning = false;
+        overlays.add('NextLevelMenu');
+      }
+    } else {
+      _bonusShadow?.showFeedback(false);
+    }
   }
 
-  // ✅ Print result for clarity
-  print('🐟 Generated fish weight: $fishWeight kg for Level $_currentLevel');
-  print('---------------------------');
+  /// ✅ Fish weight generation balanced for Level 1 rod (50% success rate).
+  /// 65% chance → 1kg, 25% → 2kg, 10% → 3kg
+  int _generateFishWeight() {
+    final remainingWeight = _levelGoal - _playerWeight;
+    if (remainingWeight <= 0) return 0;
 
-  return fishWeight;
-}
+    final roll = _random.nextDouble();
+    int fishWeight = 1;
 
+    // 🎣 Define weight distributions per level
+    final distributions = {
+      1: [0.65, 0.25, 0.10], // 65% 1kg, 25% 2kg, 10% 3kg
+      2: [0.50, 0.35, 0.10, 0.05], // 50% 1kg, 35% 2kg, 10% 3kg, 5% 4kg
+      3: [0.40, 0.35, 0.15, 0.10],
+      4: [0.30, 0.30, 0.25, 0.10, 0.05],
+      5: [0.20, 0.25, 0.25, 0.20, 0.10],
+    };
 
+    // 🧭 Print debug info when this function runs
+    print('🎮 --- Fish Weight Debug ---');
+    print('🎣 Level: $_currentLevel');
+    print('📊 Fish Weight Distribution: ${distributions[_currentLevel]}');
+    print('🎲 Roll value: ${roll.toStringAsFixed(3)}');
+
+    // Use distribution for current level or fallback
+    final dist = distributions[_currentLevel] ?? distributions[1]!;
+
+    double cumulative = 0;
+    for (int i = 0; i < dist.length; i++) {
+      cumulative += dist[i];
+      if (roll < cumulative) {
+        fishWeight = i + 1; // weight = index + 1
+        break;
+      }
+    }
+
+    // 🚫 Prevent overshoot beyond goal
+    if (fishWeight > remainingWeight) {
+      fishWeight = remainingWeight;
+    }
+
+    // ✅ Print result for clarity
+    print('🐟 Generated fish weight: $fishWeight kg for Level $_currentLevel');
+    print('---------------------------');
+
+    return fishWeight;
+  }
 
   Future<void> startNextLevel() async {
     _currentLevel++; // move to next level
@@ -288,7 +412,7 @@ final Map<int, Map<String, dynamic>> _rodConfigs = {
     _timeLeft = 60;
     _isGameRunning = true;
 
-     await _loadRodForLevel(_currentLevel);
+    await _loadRodForLevel(_currentLevel);
 
     // Reset HUD
     _hud?.updatePlayerWeight(_playerWeight, _levelGoal);
@@ -317,24 +441,22 @@ final Map<int, Map<String, dynamic>> _rodConfigs = {
   }
 
   Future<void> _loadRodForLevel(int level) async {
-  final config = _rodConfigs[level] ?? _rodConfigs[1]!; // fallback to lvl1
+    final config = _rodConfigs[level] ?? _rodConfigs[1]!; // fallback to lvl1
 
-  _rodSuccessChance = config["chance"];
+    _rodSuccessChance = config["chance"];
 
-  // If rod already exists, remove it
-  _rod?.removeFromParent();
+    // If rod already exists, remove it
+    _rod?.removeFromParent();
 
-  // Create new rod sprite
-  _rod = SpriteComponent(
-    sprite: await loadSprite(config["sprite"]),
-    size: Vector2(90, 80),
-    anchor: Anchor.center,
-    position: Vector2(-145, 71),
-    angle: -0.8,
-  );
+    // Create new rod sprite
+    _rod = SpriteComponent(
+      sprite: await loadSprite(config["sprite"]),
+      size: Vector2(90, 80),
+      anchor: Anchor.center,
+      position: Vector2(-145, 71),
+      angle: -0.8,
+    );
 
-  _world.add(_rod!);
-}
-
-
+    _world.add(_rod!);
+  }
 }
