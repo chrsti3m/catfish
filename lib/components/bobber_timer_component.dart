@@ -5,6 +5,8 @@ import 'package:flutter/material.dart';
 class BobberTimerComponent extends PositionComponent {
   final double totalTime;
   double remainingTime;
+  final double speedMultiplier;
+
   final Sprite? baseSprite;
   Paint arcPaint = Paint()
     ..style = PaintingStyle.stroke
@@ -16,6 +18,7 @@ class BobberTimerComponent extends PositionComponent {
     required this.totalTime,
     required this.remainingTime,
     this.baseSprite,
+    this.speedMultiplier = 1.0,
   }) : super(size: Vector2.all(40), anchor: Anchor.center);
 
   @override
@@ -55,7 +58,7 @@ void render(Canvas canvas) {
   @override
   void update(double dt) {
     super.update(dt);
-    remainingTime -= dt;
+    remainingTime -= dt * speedMultiplier;
     if (remainingTime <= 0) {
       removeFromParent();
     }

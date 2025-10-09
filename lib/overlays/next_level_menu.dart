@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../cat_fish.dart';
 
 class NextLevelMenu extends StatelessWidget {
-  final VoidCallback onNext;
+  final CatFish game;
 
-  const NextLevelMenu({Key? key, required this.onNext}) : super(key: key);
+  const NextLevelMenu({super.key, required this.game});
 
   @override
   Widget build(BuildContext context) {
@@ -35,7 +36,13 @@ class NextLevelMenu extends StatelessWidget {
                 foregroundColor: Colors.black,
                 padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
               ),
-              onPressed: onNext,
+              onPressed: () {
+                // 🔧 Remove the current overlay first
+                game.overlays.remove('NextLevelMenu');
+                
+                // 🪧 Start next level (which will show Level Intro overlay)
+                game.startNextLevel();
+              },
               child: Text(
                 "NEXT LEVEL",
                 style: GoogleFonts.pressStart2p(
@@ -43,6 +50,7 @@ class NextLevelMenu extends StatelessWidget {
                 ),
               ),
             ),
+
           ],
         ),
       ),

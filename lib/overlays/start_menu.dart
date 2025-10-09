@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import '../cat_fish.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+
 class StartMenu extends StatelessWidget {
   final CatFish game;
   const StartMenu({super.key, required this.game});
@@ -138,8 +139,11 @@ class StartMenu extends StatelessWidget {
                     child: InkWell(
                       onTap: () {
                         game.overlays.remove('StartMenu');
-                        game.startGame();
+                        
+                        // 🆕 Show level intro overlay instead of starting immediately
+                        game.overlays.add('LevelIntroOverlay');
                       },
+
                       splashColor: const Color(0xFF3E2414).withOpacity(0.15),
                       highlightColor: Colors.transparent,
                       child: Ink(

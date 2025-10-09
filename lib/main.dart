@@ -5,6 +5,7 @@ import 'cat_fish.dart';
 import 'overlays/start_menu.dart';
 import 'overlays/fail_menu.dart';
 import 'overlays/next_level_menu.dart';
+import 'overlays/level_intro_overlay.dart'; 
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -30,13 +31,12 @@ void main() async {
               overlayBuilderMap: {
                 'StartMenu': (BuildContext context, CatFish game) => StartMenu(game: game),
                 'FailMenu': (BuildContext context, CatFish game) => FailMenu(game: game),
-                'NextLevelMenu': (BuildContext context, CatFish game) => NextLevelMenu(
-                      onNext: () {
-                        game.overlays.remove('NextLevelMenu');
-                        game.startNextLevel(); // ✅ This will be your new method in CatFish
-                      },
-                    ),
+                'LevelIntroOverlay': (BuildContext context, CatFish game) =>
+                    LevelIntroOverlay(game: game, level: game.currentLevel),
+                'NextLevelMenu': (BuildContext context, CatFish game) =>
+                    NextLevelMenu(game: game),
               },
+
                 initialActiveOverlays: const ['StartMenu'],
               ),
             ),

@@ -63,7 +63,7 @@ class ShadowComponent extends SpriteComponent
       // Create outline paint with transparency for layering effect
       final outlinePaint = Paint()
         ..color = Colors.yellow.withOpacity(0.6)
-        ..colorFilter = const ColorFilter.mode(Colors.yellow, BlendMode.srcATop);
+        ..colorFilter = const ColorFilter.mode(Colors.white, BlendMode.srcATop);
       
       // Draw each offset copy to create the outline
       for (final offset in outlineOffsets) {
