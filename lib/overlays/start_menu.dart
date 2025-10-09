@@ -7,102 +7,226 @@ class StartMenu extends StatelessWidget {
   final CatFish game;
   const StartMenu({super.key, required this.game});
 
-  @override
-  Widget build(BuildContext context) {
-    // 1. Full-screen transparent overlay
-    return Container(
-      color: Colors.black.withOpacity(0.8),
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          final double availableHeight = constraints.maxHeight; // ~421
-          // Keep the logo at ~55% of available height and button around ~10%.
-          final double logoMaxHeight = availableHeight * 0.55;
-          final double buttonHeight = availableHeight * 0.10;
-          final double buttonMaxWidth = math.min(constraints.maxWidth * 0.35, 340);
-          final double fontSize = buttonHeight * 0.38; // clamp naturally small on tiny screens
-          return Center(
-            child: Column(
-          // Center the content block vertically
-          mainAxisAlignment: MainAxisAlignment.center,
-          mainAxisSize: MainAxisSize.max, // Allow children to flex within available height
-          children: [
-            // 2. Catfish Logo Image
-            SizedBox(
-              height: logoMaxHeight,
-              child: Image.asset(
-                // **Use the confirmed path based on your pubspec.yaml**
-                'assets/images/LOGO.png',
+  void _showHowToPlayModal(BuildContext context) {
+    showDialog(
+      context: context,
+      barrierDismissible: true, // tap outside to close
+      builder: (context) {
+        return Dialog(
+          backgroundColor: Colors.transparent,
+          insetPadding: const EdgeInsets.all(20),
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              // 🧱 Background container image
+              Image.asset(
+                'assets/images/container.png',
                 fit: BoxFit.contain,
-                // CRUCIAL: Set filterQuality to 'none' to maintain the crisp pixel art look
                 filterQuality: FilterQuality.none,
               ),
-            ),
 
-            const SizedBox(height: 20), // Space between logo and button
-
-            // 3. Start Button - wooden plank style to match the logo
-            ConstrainedBox(
-              constraints: BoxConstraints(
-                maxWidth: buttonMaxWidth,
-                minHeight: buttonHeight,
-              ),
-              child: Material(
-                color: Colors.transparent,
-                child: InkWell(
-                  onTap: () {
-                    game.overlays.remove('StartMenu');
-                    game.startGame();
-                  },
-                  splashColor: const Color(0xFF3E2414).withOpacity(0.15),
-                  highlightColor: Colors.transparent,
-                  child: Ink(
-                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
-                    decoration: BoxDecoration(
-                      // Vertical wood-like gradient
-                      gradient: const LinearGradient(
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
-                        colors: [
-                          Color(0xFFB07A3E), // light wood
-                          Color(0xFF8B5E3C),
-                          Color(0xFF6E3E1F), // dark wood
-                        ],
-                        stops: [0.0, 0.55, 1.0],
+              // 📜 Text content overlaid on top of container
+              Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 30,
+                  vertical: 40,
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      "HOW TO PLAY",
+                      textAlign: TextAlign.center,
+                      style: GoogleFonts.pressStart2p(
+                        fontSize: 14,
+                        color: const Color(0xFF4A2E16),
                       ),
-                      border: Border.all(
-                        color: const Color(0xFF3E2414),
-                        width: 3,
-                      ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.6),
-                          offset: const Offset(0, 6),
-                          blurRadius: 0,
-                          spreadRadius: 0,
-                        ),
-                      ],
                     ),
-                    child: Stack(
-                      alignment: Alignment.center,
-                      children: [
-                        // Removed inner highlight/shadow stripes to avoid a visible line behind the text
-                        Text(
-                          "Start Fishing",
-                          textAlign: TextAlign.center,
-                          style: GoogleFonts.pressStart2p(
-                            fontSize: fontSize.clamp(10, 16),
-                            color: const Color(0xFFFFF4D6),
-                            // Removed heavy drop shadow to avoid a bordered look on the label
+                    const SizedBox(height: 20),
+                    Text(
+                      "🎯 Tap a shadow to cast your line.\n"
+                      "🐟 Wait for the bobber to wriggle.\n"
+                      "⚡ Tap the bobber fast to catch the fish!\n\n"
+                      "🎯 Reach the target weight to level up!",
+                      textAlign: TextAlign.center,
+                      style: GoogleFonts.pressStart2p(
+                        fontSize: 8,
+                        height: 1.6,
+                        color: const Color(0xFF4A2E16),
+                      ),
+                    ),
+
+                    const SizedBox(height: 25),
+                    // 🟤 "GOT IT" Button
+                    ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF8B5E3C),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 40,
+                          vertical: 12,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(6),
+                          side: const BorderSide(
+                            color: Color(0xFF3E2414),
+                            width: 3,
                           ),
                         ),
-                      ],
+                      ),
+                      onPressed: () => Navigator.of(context).pop(),
+                      child: Text(
+                        "GOT IT",
+                        style: GoogleFonts.pressStart2p(
+                          fontSize: 10,
+                          color: const Color(0xFFFFEBD2),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      color: const Color(0xFF2FA357),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final double availableHeight = constraints.maxHeight;
+          final double logoMaxHeight = availableHeight * 0.55;
+          final double buttonHeight = availableHeight * 0.10;
+          final double buttonMaxWidth = math.min(
+            constraints.maxWidth * 0.35,
+            340,
+          );
+          final double fontSize = buttonHeight * 0.38;
+
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                // 🐟 Logo
+                SizedBox(
+                  height: logoMaxHeight,
+                  child: Image.asset(
+                    'assets/images/LOGO.png',
+                    fit: BoxFit.contain,
+                    filterQuality: FilterQuality.none,
+                  ),
+                ),
+                const SizedBox(height: 20),
+
+                // 🎣 Start Fishing Button
+                ConstrainedBox(
+                  constraints: BoxConstraints(
+                    maxWidth: buttonMaxWidth,
+                    minHeight: buttonHeight,
+                  ),
+                  child: Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      onTap: () {
+                        game.overlays.remove('StartMenu');
+                        game.startGame();
+                      },
+                      splashColor: const Color(0xFF3E2414).withOpacity(0.15),
+                      highlightColor: Colors.transparent,
+                      child: Ink(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 24,
+                          vertical: 10,
+                        ),
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(
+                            begin: Alignment.topCenter,
+                            end: Alignment.bottomCenter,
+                            colors: [
+                              Color(0xFFB07A3E),
+                              Color(0xFF8B5E3C),
+                              Color(0xFF6E3E1F),
+                            ],
+                          ),
+                          border: Border.all(
+                            color: Color(0xFF3E2414),
+                            width: 3,
+                          ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.6),
+                              offset: const Offset(0, 6),
+                            ),
+                          ],
+                        ),
+                        child: Center(
+                          child: Text(
+                            "START FISHING",
+                            textAlign: TextAlign.center,
+                            style: GoogleFonts.pressStart2p(
+                              fontSize: fontSize.clamp(10, 16),
+                              color: const Color(0xFFFFF4D6),
+                            ),
+                          ),
+                        ),
+                      ),
                     ),
                   ),
                 ),
-              ),
+
+                const SizedBox(height: 16),
+
+                // 🟤 HOW TO PLAY Button
+                ConstrainedBox(
+                  constraints: BoxConstraints(
+                    maxWidth: buttonMaxWidth * 0.8,
+                    minHeight: buttonHeight * 0.8,
+                  ),
+                  child: Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      onTap: () => _showHowToPlayModal(context),
+                      splashColor: const Color(0xFF3E2414).withOpacity(0.15),
+                      highlightColor: Colors.transparent,
+                      child: Ink(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 20,
+                          vertical: 8,
+                        ),
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(
+                            begin: Alignment.topCenter,
+                            end: Alignment.bottomCenter,
+                            colors: [
+                              Color(0xFFB07A3E),
+                              Color(0xFF8B5E3C),
+                              Color(0xFF6E3E1F),
+                            ],
+                          ),
+                          border: Border.all(
+                            color: Color(0xFF3E2414),
+                            width: 3,
+                          ),
+                        ),
+                        child: Center(
+                          child: Text(
+                            "HOW TO PLAY",
+                            style: GoogleFonts.pressStart2p(
+                              fontSize: fontSize.clamp(8, 12),
+                              color: const Color(0xFFFFF4D6),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ),
-          ],
-        ),
           );
         },
       ),
