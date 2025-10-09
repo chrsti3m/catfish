@@ -8,89 +8,94 @@ class StartMenu extends StatelessWidget {
   const StartMenu({super.key, required this.game});
 
   void _showHowToPlayModal(BuildContext context) {
-    showDialog(
-      context: context,
-      barrierDismissible: true, // tap outside to close
-      builder: (context) {
-        return Dialog(
-          backgroundColor: Colors.transparent,
-          insetPadding: const EdgeInsets.all(20),
-          child: Stack(
-            alignment: Alignment.center,
-            children: [
-              // 🧱 Background container image
-              Image.asset(
-                'assets/images/container.png',
-                fit: BoxFit.contain,
-                filterQuality: FilterQuality.none,
-              ),
+  showDialog(
+    context: context,
+    barrierDismissible: true, // tap outside to close
+    builder: (context) {
+      return Dialog(
+        backgroundColor: Colors.transparent,
+        insetPadding: const EdgeInsets.all(20),
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            // 🧱 Background container image
+            Image.asset(
+              'assets/images/container.png',
+              fit: BoxFit.contain,
+              filterQuality: FilterQuality.none,
+            ),
 
-              // 📜 Text content overlaid on top of container
-              Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 30,
-                  vertical: 40,
-                ),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      "HOW TO PLAY",
-                      textAlign: TextAlign.center,
-                      style: GoogleFonts.pressStart2p(
-                        fontSize: 14,
-                        color: const Color(0xFF4A2E16),
-                      ),
-                    ),
-                    const SizedBox(height: 20),
-                    Text(
-                      "🎯 Tap a shadow to cast your line.\n"
-                      "🐟 Wait for the bobber to wriggle.\n"
-                      "⚡ Tap the bobber fast to catch the fish!\n\n"
-                      "🎯 Reach the target weight to level up!",
-                      textAlign: TextAlign.center,
-                      style: GoogleFonts.pressStart2p(
-                        fontSize: 8,
-                        height: 1.6,
-                        color: const Color(0xFF4A2E16),
-                      ),
-                    ),
-
-                    const SizedBox(height: 25),
-                    // 🟤 "GOT IT" Button
-                    ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF8B5E3C),
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 40,
-                          vertical: 12,
-                        ),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(6),
-                          side: const BorderSide(
-                            color: Color(0xFF3E2414),
-                            width: 3,
-                          ),
-                        ),
-                      ),
-                      onPressed: () => Navigator.of(context).pop(),
-                      child: Text(
-                        "GOT IT",
-                        style: GoogleFonts.pressStart2p(
-                          fontSize: 10,
-                          color: const Color(0xFFFFEBD2),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
+            // 📜 Text content overlaid on top of container
+            Padding(
+              padding: const EdgeInsets.symmetric(
+                horizontal: 30,
+                vertical: 40,
               ),
-            ],
-          ),
-        );
-      },
-    );
-  }
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    "HOW TO PLAY",
+                    textAlign: TextAlign.center,
+                    style: GoogleFonts.pressStart2p(
+                      fontSize: 14,
+                      color: const Color(0xFF4A2E16),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+
+                  Text(
+                    "🎯 Tap a shadow to cast your line.\n"
+                    "🐟 Watch for the bobber to wriggle — that means a bite!\n"
+                    "⚡ Tap the bobber fast to catch the fish.\n\n"
+                    "🏋️ Each fish adds to your total weight.\n"
+                    "🎯 Reach the target weight before time runs out to level up!\n\n"
+                    "🎣 Higher levels mean tougher catches and better rods!",
+                    textAlign: TextAlign.center,
+                    style: GoogleFonts.pressStart2p(
+                      fontSize: 8,
+                      height: 1.6,
+                      color: const Color(0xFF4A2E16),
+                    ),
+                  ),
+
+                  const SizedBox(height: 25),
+
+                  // 🟤 "GOT IT" Button
+                  ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF8B5E3C),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 40,
+                        vertical: 12,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(6),
+                        side: const BorderSide(
+                          color: Color(0xFF3E2414),
+                          width: 3,
+                        ),
+                      ),
+                    ),
+                    onPressed: () => Navigator.of(context).pop(),
+                    child: Text(
+                      "GOT IT",
+                      style: GoogleFonts.pressStart2p(
+                        fontSize: 10,
+                        color: const Color(0xFFFFEBD2),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      );
+    },
+  );
+}
+
 
   @override
   Widget build(BuildContext context) {

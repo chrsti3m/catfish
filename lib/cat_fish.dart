@@ -41,14 +41,15 @@ class CatFish extends FlameGame with HasCollisionDetection {
   // Getter → always gives the right target for the current level
   int get _levelGoal => _levelGoals[_currentLevel] ?? 10;
 
-  // Map of rod configs per level
-  final Map<int, Map<String, dynamic>> _rodConfigs = {
-    1: {"sprite": "ROD1.png", "chance": 0.50},
-    2: {"sprite": "ROD2.png", "chance": 0.60},
-    3: {"sprite": "ROD3.png", "chance": 0.70},
-    4: {"sprite": "ROD4.png", "chance": 0.75},
-    5: {"sprite": "ROD5.png", "chance": 0.80},
-  };
+  // 🎣 Rod configurations: defines sprite, success chance, and fish weight range per level
+final Map<int, Map<String, dynamic>> _rodConfigs = {
+  1: {"sprite": "ROD1.png", "chance": 0.50, "minW": 1, "maxW": 3}, // 1–3 kg
+  2: {"sprite": "ROD2.png", "chance": 0.60, "minW": 1, "maxW": 4}, // 1–4 kg
+  3: {"sprite": "ROD3.png", "chance": 0.70, "minW": 2, "maxW": 4}, // 2–4 kg
+  4: {"sprite": "ROD4.png", "chance": 0.75, "minW": 3, "maxW": 5}, // 3–5 kg
+  5: {"sprite": "ROD5.png", "chance": 0.80, "minW": 3, "maxW": 5}, // 3–5 kg
+};
+
 
   // Timer & Game state
   async.Timer? _countdownTimer;
@@ -360,51 +361,27 @@ class CatFish extends FlameGame with HasCollisionDetection {
 
   /// ✅ Fish weight generation balanced for Level 1 rod (50% success rate).
   /// 65% chance → 1kg, 25% → 2kg, 10% → 3kg
-  int _generateFishWeight() {
-    final remainingWeight = _levelGoal - _playerWeight;
-    if (remainingWeight <= 0) return 0;
+  /// 🎣 Generates fish weight based on current rod level.
+/// The rod defines the possible range (min–max weight) and
+/// heavier rods tend to catch heavier fish on average.
+int _generateFishWeight() {
+  final config = _rodConfigs[_currentLevel] ?? _rodConfigs[1]!;
+  final min = config["minW"] as int;
+  final max = config["maxW"] as int;
 
-    final roll = _random.nextDouble();
-    int fishWeight = 1;
+  // Roll between min and max
+  int fishWeight = min + _random.nextInt(max - min + 1);
 
-    // 🎣 Define weight distributions per level
-    final distributions = {
-      1: [0.65, 0.25, 0.10], // 65% 1kg, 25% 2kg, 10% 3kg
-      2: [0.50, 0.35, 0.10, 0.05], // 50% 1kg, 35% 2kg, 10% 3kg, 5% 4kg
-      3: [0.40, 0.35, 0.15, 0.10],
-      4: [0.30, 0.30, 0.25, 0.10, 0.05],
-      5: [0.20, 0.25, 0.25, 0.20, 0.10],
-    };
-
-    // 🧭 Print debug info when this function runs
-    print('🎮 --- Fish Weight Debug ---');
-    print('🎣 Level: $_currentLevel');
-    print('📊 Fish Weight Distribution: ${distributions[_currentLevel]}');
-    print('🎲 Roll value: ${roll.toStringAsFixed(3)}');
-
-    // Use distribution for current level or fallback
-    final dist = distributions[_currentLevel] ?? distributions[1]!;
-
-    double cumulative = 0;
-    for (int i = 0; i < dist.length; i++) {
-      cumulative += dist[i];
-      if (roll < cumulative) {
-        fishWeight = i + 1; // weight = index + 1
-        break;
-      }
-    }
-
-    // 🚫 Prevent overshoot beyond goal
-    if (fishWeight > remainingWeight) {
-      fishWeight = remainingWeight;
-    }
-
-    // ✅ Print result for clarity
-    print('🐟 Generated fish weight: $fishWeight kg for Level $_currentLevel');
-    print('---------------------------');
-
-    return fishWeight;
+  // Prevent overshooting target goal
+  final remainingWeight = _levelGoal - _playerWeight;
+  if (fishWeight > remainingWeight) {
+    fishWeight = remainingWeight;
   }
+
+  print('🐟 Level $_currentLevel caught a fish weighing $fishWeight kg');
+  return fishWeight;
+}
+
 
   Future<void> startNextLevel() async {
     _currentLevel++; // move to next level
@@ -458,5 +435,8 @@ class CatFish extends FlameGame with HasCollisionDetection {
     );
 
     _world.add(_rod!);
+    print('🎣 Loaded rod for Level $level → ${config["minW"]}-${config["maxW"]} kg range, ${(_rodSuccessChance * 100).toInt()}% catch chance');
+
   }
+  
 }

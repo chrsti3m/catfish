@@ -4,6 +4,7 @@ import 'package:flame/events.dart';
 import 'package:flame_audio/flame_audio.dart';
 import 'package:cat_fish/components/bobber_timer_component.dart';
 
+
 class BobberComponent extends SpriteComponent with HasGameRef, TapCallbacks {
   bool isWriggling = false;
   bool _hasBeenTapped = false;
