@@ -41,7 +41,7 @@ class FailMenu extends StatelessWidget {
       ),
       onPressed: () {
         game.overlays.remove('FailMenu');
-        game.overlays.add('StartMenu');
+        game.restartCurrentLevel();
       },
       child: Text(
         "Try Again",

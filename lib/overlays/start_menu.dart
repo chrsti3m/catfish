@@ -3,100 +3,100 @@ import 'dart:math' as math;
 import '../cat_fish.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-
 class StartMenu extends StatelessWidget {
   final CatFish game;
   const StartMenu({super.key, required this.game});
 
   void _showHowToPlayModal(BuildContext context) {
-  showDialog(
-    context: context,
-    barrierDismissible: true, // tap outside to close
-    builder: (context) {
-      return Dialog(
-        backgroundColor: Colors.transparent,
-        insetPadding: const EdgeInsets.all(20),
-        child: Stack(
-          alignment: Alignment.center,
+    showDialog(
+      context: context,
+      barrierDismissible: true, // tap outside to close
+      builder: (context) {
+        return Dialog(
+          backgroundColor: Colors.transparent,
+          insetPadding: const EdgeInsets.all(20),
+          child: Stack(
+  alignment: Alignment.center,
+  children: [
+    // 🧱 Background
+    Image.asset(
+      'assets/images/container.png',
+      fit: BoxFit.contain,
+      filterQuality: FilterQuality.none,
+    ),
+
+    // 📜 Text content (centered inside)
+    Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 40),
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 350),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
           children: [
-            // 🧱 Background container image
-            Image.asset(
-              'assets/images/container.png',
-              fit: BoxFit.contain,
-              filterQuality: FilterQuality.none,
-            ),
-
-            // 📜 Text content overlaid on top of container
-            Padding(
-              padding: const EdgeInsets.symmetric(
-                horizontal: 30,
-                vertical: 40,
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    "HOW TO PLAY",
-                    textAlign: TextAlign.center,
-                    style: GoogleFonts.pressStart2p(
-                      fontSize: 14,
-                      color: const Color(0xFF4A2E16),
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-
-                  Text(
-                    "🎯 Tap a shadow to cast your line.\n"
-                    "🐟 Watch for the bobber to wriggle — that means a bite!\n"
-                    "⚡ Tap the bobber fast to catch the fish.\n\n"
-                    "🏋️ Each fish adds to your total weight.\n"
-                    "🎯 Reach the target weight before time runs out to level up!\n\n"
-                    "🎣 Higher levels mean tougher catches and better rods!",
-                    textAlign: TextAlign.center,
-                    style: GoogleFonts.pressStart2p(
-                      fontSize: 8,
-                      height: 1.6,
-                      color: const Color(0xFF4A2E16),
-                    ),
-                  ),
-
-                  const SizedBox(height: 25),
-
-                  // 🟤 "GOT IT" Button
-                  ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF8B5E3C),
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 40,
-                        vertical: 12,
-                      ),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(6),
-                        side: const BorderSide(
-                          color: Color(0xFF3E2414),
-                          width: 3,
-                        ),
-                      ),
-                    ),
-                    onPressed: () => Navigator.of(context).pop(),
-                    child: Text(
-                      "GOT IT",
-                      style: GoogleFonts.pressStart2p(
-                        fontSize: 10,
-                        color: const Color(0xFFFFEBD2),
-                      ),
-                    ),
-                  ),
-                ],
+            const SizedBox(height: 5),
+            Text(
+              "HOW TO PLAY",
+              textAlign: TextAlign.center,
+              style: GoogleFonts.pressStart2p(
+                fontSize: 14,
+                color: Color(0xFF4A2E16),
               ),
             ),
+            const SizedBox(height: 10),
+            Text(
+              "🎯 Goal:\n"
+              "Catch enough fish to reach the target weight before time runs out.\n\n"
+              "🎮 Controls:\n"
+              "1️. Tap a SHADOW in the water to cast your line.\n"
+              "2️. Wait for the BOBBER to shake — that means a fish is biting!\n"
+              "3️. Tap the bobber quickly before the bobber timer runs out to catch it.\n\n"
+              "💡 Tips:\n"
+              "• Each fish adds to your total weight shown in the Progress Bar.\n"
+              "• Each new level upgrades your ROD — increasing catch chance and fish size.\n"
+              "• Timing matters: Tap too early and the fish escapes!\n\n"
+              "⚙️ Keep fishing, level up your rod, and become the ultimate Cat Fisher!",
+              textAlign: TextAlign.center,
+              style: GoogleFonts.pressStart2p(
+                fontSize: 8,
+                height: 1.6,
+                color: Color(0xFF4A2E16),
+              ),
+            ),
+            const SizedBox(height: 40),
           ],
         ),
-      );
-    },
-  );
-}
+      ),
+    ),
 
+    // 🎯 Button overlayed near bottom of container
+    Positioned(
+      bottom: 40, // adjust to align with brown plank edge
+      child: ElevatedButton(
+        style: ElevatedButton.styleFrom(
+          backgroundColor: const Color(0xFF8B5E3C),
+          padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 12),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(6),
+            side: const BorderSide(color: Color(0xFF3E2414), width: 3),
+          ),
+        ),
+        onPressed: () => Navigator.of(context).pop(),
+        child: Text(
+          "GOT IT",
+          style: GoogleFonts.pressStart2p(
+            fontSize: 10,
+            color: const Color(0xFFFFEBD2),
+          ),
+        ),
+      ),
+    ),
+  ],
+),
+
+        );
+      },
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -139,7 +139,7 @@ class StartMenu extends StatelessWidget {
                     child: InkWell(
                       onTap: () {
                         game.overlays.remove('StartMenu');
-                        
+
                         // 🆕 Show level intro overlay instead of starting immediately
                         game.overlays.add('LevelIntroOverlay');
                       },

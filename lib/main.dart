@@ -5,7 +5,8 @@ import 'cat_fish.dart';
 import 'overlays/start_menu.dart';
 import 'overlays/fail_menu.dart';
 import 'overlays/next_level_menu.dart';
-import 'overlays/level_intro_overlay.dart'; 
+import 'overlays/level_intro_overlay.dart';
+import 'overlays/fish_rain_modal.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -35,6 +36,7 @@ void main() async {
                     LevelIntroOverlay(game: game, level: game.currentLevel),
                 'NextLevelMenu': (BuildContext context, CatFish game) =>
                     NextLevelMenu(game: game),
+                'FishRainModal': (BuildContext context, CatFish game) => FishRainModal(game: game),
               },
 
                 initialActiveOverlays: const ['StartMenu'],

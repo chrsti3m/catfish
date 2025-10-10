@@ -12,7 +12,6 @@ import 'package:flame_audio/flame_audio.dart';
 import 'package:flame/effects.dart';
 
 
-
 class CatFish extends FlameGame with HasCollisionDetection {
   late final World _world;
   late final CameraComponent _camera;
@@ -39,28 +38,85 @@ class CatFish extends FlameGame with HasCollisionDetection {
     4: 25, // Level 4 requires 25kg
     5: 30, // Level 5 requires 30kg
   };
+  Map<int, int> get levelGoals => _levelGoals;
 
   // Getter → always gives the right target for the current level
   int get _levelGoal => _levelGoals[_currentLevel] ?? 10;
 
   // 🎣 Rod configurations: defines sprite, success chance, and fish weight range per level
-final Map<int, Map<String, dynamic>> _rodConfigs = {
-  1: {"sprite": "ROD1.png", "chance": 0.50, "minW": 1, "maxW": 3, "speedMultiplier": 1.2},
-  2: {"sprite": "ROD2.png", "chance": 0.60, "minW": 1, "maxW": 4, "speedMultiplier": 1.1},
-  3: {"sprite": "ROD3.png", "chance": 0.70, "minW": 2, "maxW": 4, "speedMultiplier": 1.0},
-  4: {"sprite": "ROD4.png", "chance": 0.75, "minW": 3, "maxW": 5, "speedMultiplier": 0.9},
-  5: {"sprite": "ROD5.png", "chance": 0.80, "minW": 3, "maxW": 5, "speedMultiplier": 0.8},
-};
-Map<int, Map<String, dynamic>> get rodConfigs => _rodConfigs;
-
-
-
+  final Map<int, Map<String, dynamic>> _rodConfigs = {
+    1: {
+      "sprite": "ROD1.png",
+      "chance": 0.50,
+      "minW": 1,
+      "maxW": 3,
+      "speedMultiplier": 1.2,
+    },
+    2: {
+      "sprite": "ROD2.png",
+      "chance": 0.60,
+      "minW": 1,
+      "maxW": 4,
+      "speedMultiplier": 1.1,
+    },
+    3: {
+      "sprite": "ROD3.png",
+      "chance": 0.70,
+      "minW": 2,
+      "maxW": 4,
+      "speedMultiplier": 1.0,
+    },
+    4: {
+      "sprite": "ROD5.png",
+      "chance": 0.75,
+      "minW": 3,
+      "maxW": 5,
+      "speedMultiplier": 0.9,
+    },
+    5: {
+      "sprite": "ROD4.png",
+      "chance": 0.80,
+      "minW": 3,
+      "maxW": 5,
+      "speedMultiplier": 0.8,
+    },
+  };
+  Map<int, Map<String, dynamic>> get rodConfigs => _rodConfigs;
 
   // Timer & Game state
   async.Timer? _countdownTimer;
   int _timeLeft = 60;
   bool _isGameRunning = false;
   bool _audioInitialized = false;
+
+  bool get isGameRunning => _isGameRunning;
+
+void pauseGameForOverlay() {
+  if (!_isGameRunning) return;
+
+  _countdownTimer?.cancel();
+  _isGameRunning = false;
+
+  overlays.add('LevelIntroOverlay');
+  print("⏸️ Game paused, showing overlay");
+}
+
+void resumeGame() {
+  if (_isGameRunning) return;
+
+  _isGameRunning = true;
+
+  _countdownTimer = async.Timer.periodic(const Duration(seconds: 1), (timer) {
+    _timeLeft--;
+    _hud?.updateGameTimer(_timeLeft);
+    if (_timeLeft <= 0) {
+      timer.cancel();
+      _endGame();
+    }
+  });
+
+  print("▶️ Game resumed");
+}
 
   @override
   Future<void> onLoad() async {
@@ -119,9 +175,13 @@ Map<int, Map<String, dynamic>> get rodConfigs => _rodConfigs;
     _hud = HudComponent();
     _world.add(_hud!);
 
+  
+
+
     // ✅ Show Start overlay at beginning
     overlays.add('StartMenu');
   }
+  
 
   @override
   void onRemove() {
@@ -162,6 +222,8 @@ Map<int, Map<String, dynamic>> get rodConfigs => _rodConfigs;
         _endGame();
       }
     });
+
+ 
   }
 
   // ✅ Handle game end
@@ -236,6 +298,8 @@ Map<int, Map<String, dynamic>> get rodConfigs => _rodConfigs;
 
         print("🐟 Bobber stopped wriggling");
         _persistentShadow?.showFeedback(false);
+        // Move BOTH shadows after bobber disappears
+        moveBothShadowsToNonOverlappingPositions();
       },
       onTap: _attemptCatch,
     );
@@ -265,6 +329,8 @@ Map<int, Map<String, dynamic>> get rodConfigs => _rodConfigs;
         _rod?.position = Vector2(-145, 71);
         _rod?.angle = -0.8;
         _bonusShadow?.showFeedback(false);
+        // Move BOTH shadows after bobber disappears
+        moveBothShadowsToNonOverlappingPositions();
       },
       onTap: (success) => _attemptCatchBonus(success),
     );
@@ -272,6 +338,34 @@ Map<int, Map<String, dynamic>> get rodConfigs => _rodConfigs;
 
     _rod?.position = Vector2(-135, 78);
     _rod?.angle = -0.3;
+  }
+
+  // Helper - get random position for shadows in the lake, after the boat
+  Vector2 getRandomShadowLakePosition() {
+    // Updated bounds from user:
+    double minX = -90, maxX = 450, minY = 80, maxY = 200;
+    return Vector2(
+      minX + _random.nextDouble() * (maxX - minX),
+      minY + _random.nextDouble() * (maxY - minY),
+    );
+  }
+  void moveShadowToNewLakePosition(ShadowComponent? shadow) {
+    if (shadow == null) return;
+    shadow.position = getRandomShadowLakePosition();
+  }
+
+  void moveBothShadowsToNonOverlappingPositions() {
+    if (_persistentShadow == null || _bonusShadow == null) return;
+    final double minDistance = ((_persistentShadow?.size.x ?? 60) / 2) + ((_bonusShadow?.size.x ?? 60) / 2) + 20; // pixel gap
+    Vector2 first = getRandomShadowLakePosition();
+    Vector2 second;
+    int attempts = 0;
+    do {
+      second = getRandomShadowLakePosition();
+      attempts++;
+    } while (first.distanceTo(second) < minDistance && attempts < 30);
+    _persistentShadow!.position = first;
+    _bonusShadow!.position = second;
   }
 
   void _attemptCatch(bool success) {
@@ -284,6 +378,8 @@ Map<int, Map<String, dynamic>> get rodConfigs => _rodConfigs;
       _currentBobber?.removeFromParent();
       _currentBobber = null;
       _isBobberActive = false;
+      // Move BOTH shadows even if failed
+      moveBothShadowsToNonOverlappingPositions();
       return;
     }
 
@@ -312,22 +408,23 @@ Map<int, Map<String, dynamic>> get rodConfigs => _rodConfigs;
       _persistentShadow?.showFeedback(true, fishWeight.toDouble());
 
       if (_playerWeight >= _levelGoal) {
-  _countdownTimer?.cancel();
-  _isGameRunning = false;
+        _countdownTimer?.cancel();
+        _isGameRunning = false;
 
-  if (_currentLevel == 5) {
-    // Automatically trigger fish rain for level 5
-    _triggerFishRainCelebrationLoop();
-  } else {
-    overlays.add('NextLevelMenu');
-    overlays.remove('LevelIntroOverlay');
-  }
-}
-
+        if (_currentLevel == 5) {
+          // Automatically trigger fish rain for level 5
+          _triggerFishRainCelebrationLoop();
+        } else {
+          overlays.add('NextLevelMenu');
+          overlays.remove('LevelIntroOverlay');
+        }
+      }
     } else {
       print("FAILED! The fish got away!");
       _persistentShadow?.showFeedback(false);
     }
+    // Move BOTH shadows after bobber disappears, regardless of success
+    moveBothShadowsToNonOverlappingPositions();
   }
 
   void _attemptCatchBonus(bool success) {
@@ -338,6 +435,8 @@ Map<int, Map<String, dynamic>> get rodConfigs => _rodConfigs;
       _currentBobber?.removeFromParent();
       _currentBobber = null;
       _isBobberActive = false;
+      // Move BOTH shadows even if failed
+      moveBothShadowsToNonOverlappingPositions();
       return;
     }
 
@@ -363,80 +462,78 @@ Map<int, Map<String, dynamic>> get rodConfigs => _rodConfigs;
       _bonusShadow?.showFeedback(true, fishWeight.toDouble());
 
       if (_playerWeight >= _levelGoal) {
-  _countdownTimer?.cancel();
-  _isGameRunning = false;
+        _countdownTimer?.cancel();
+        _isGameRunning = false;
 
-  if (_currentLevel == 5) {
-    // Automatically trigger fish rain for level 5
-    _triggerFishRainCelebrationLoop();
-  } else {
-    overlays.add('NextLevelMenu');
-    overlays.remove('LevelIntroOverlay');
-  }
-}
-
+        if (_currentLevel == 5) {
+          // Automatically trigger fish rain for level 5
+          _triggerFishRainCelebrationLoop();
+        } else {
+          overlays.add('NextLevelMenu');
+          overlays.remove('LevelIntroOverlay');
+        }
+      }
     } else {
       _bonusShadow?.showFeedback(false);
     }
+    // Move BOTH shadows after bobber disappears, regardless of success
+    moveBothShadowsToNonOverlappingPositions();
   }
 
   /// ✅ Fish weight generation balanced for Level 1 rod (50% success rate).
   /// 65% chance → 1kg, 25% → 2kg, 10% → 3kg
   /// 🎣 Generates fish weight based on current rod level.
-/// The rod defines the possible range (min–max weight) and
-/// heavier rods tend to catch heavier fish on average.
-int _generateFishWeight() {
-  final config = _rodConfigs[_currentLevel] ?? _rodConfigs[1]!;
-  final min = config["minW"] as int;
-  final max = config["maxW"] as int;
+  /// The rod defines the possible range (min–max weight) and
+  /// heavier rods tend to catch heavier fish on average.
+  int _generateFishWeight() {
+    final config = _rodConfigs[_currentLevel] ?? _rodConfigs[1]!;
+    final min = config["minW"] as int;
+    final max = config["maxW"] as int;
 
-  // Roll between min and max
-  int fishWeight = min + _random.nextInt(max - min + 1);
+    // Roll between min and max
+    int fishWeight = min + _random.nextInt(max - min + 1);
 
-  // Prevent overshooting target goal
-  final remainingWeight = _levelGoal - _playerWeight;
-  if (fishWeight > remainingWeight) {
-    fishWeight = remainingWeight;
+    // Prevent overshooting target goal
+    final remainingWeight = _levelGoal - _playerWeight;
+    if (fishWeight > remainingWeight) {
+      fishWeight = remainingWeight;
+    }
+
+    print('🐟 Level $_currentLevel caught a fish weighing $fishWeight kg');
+    return fishWeight;
   }
-
-  print('🐟 Level $_currentLevel caught a fish weighing $fishWeight kg');
-  return fishWeight;
-}
-
 
   Future<void> startNextLevel() async {
-  _playerWeight = 0;
-  _timeLeft = 60;
-  _isGameRunning = false; // pause game start until overlay closes
+    _playerWeight = 0;
+    _timeLeft = 60;
+    _isGameRunning = false; // pause game start until overlay closes
 
-  if (_currentLevel >= 5) {
-    
-    return;
-  }
+    if (_currentLevel >= 5) {
+      return;
+    }
 
-  _currentLevel++;
+    _currentLevel++;
 
-  await _loadRodForLevel(_currentLevel);
+    await _loadRodForLevel(_currentLevel);
 
-  // Reset HUD visuals
-  _hud?.updatePlayerWeight(_playerWeight, _levelGoal);
-  _hud?.updateFillProgress(0.0);
-  _hud?.updateGameTimer(_timeLeft);
+    // Reset HUD visuals
+    _hud?.updatePlayerWeight(_playerWeight, _levelGoal);
+    _hud?.updateFillProgress(0.0);
+    _hud?.updateGameTimer(_timeLeft);
 
-  // Reset rod position
-  _rod?.position = Vector2(-145, 71);
-  _rod?.angle = -0.8;
+    // Reset rod position
+    _rod?.position = Vector2(-145, 71);
+    _rod?.angle = -0.8;
 
-  // Cancel any old timer
-  _countdownTimer?.cancel();
+    // Cancel any old timer
+    _countdownTimer?.cancel();
 
-  // 🪧 Show Level Intro overlay first
-  overlays.add('LevelIntroOverlay');
-  print("🚀 Level $_currentLevel Started!");
-}
+    // 🪧 Show Level Intro overlay first
+    overlays.add('LevelIntroOverlay');
+    print("🚀 Level $_currentLevel Started!");
 
-    
   
+  }
 
   Future<void> _loadRodForLevel(int level) async {
     final config = _rodConfigs[level] ?? _rodConfigs[1]!; // fallback to lvl1
@@ -456,74 +553,113 @@ int _generateFishWeight() {
     );
 
     _world.add(_rod!);
-    print('🎣 Loaded rod for Level $level → ${config["minW"]}-${config["maxW"]} kg range, ${(_rodSuccessChance * 100).toInt()}% catch chance');
-
+    print(
+      '🎣 Loaded rod for Level $level → ${config["minW"]}-${config["maxW"]} kg range, ${(_rodSuccessChance * 100).toInt()}% catch chance',
+    );
   }
 
   void startLevelAfterIntro() {
-  _isGameRunning = true;
+    _isGameRunning = true;
+    _timeLeft = 60;
+    _initializeAudioIfNeeded();
+    _countdownTimer?.cancel();
+    _countdownTimer = async.Timer.periodic(const Duration(seconds: 1), (timer) {
+      _timeLeft--;
+      _hud?.updateGameTimer(_timeLeft);
+
+      if (_timeLeft <= 0) {
+        timer.cancel();
+        _endGame();
+      }
+    });
+
+    print("🚀 Level $_currentLevel officially started after intro!");
+  }
+  void restartCurrentLevel() {
+  print("🔁 Restarting Level $_currentLevel...");
+
+  // Reset basic game state
+  _playerWeight = 0;
   _timeLeft = 60;
-_initializeAudioIfNeeded();
+  _isGameRunning = false;
+  _isBobberActive = false;
+
+  // Reset HUD values
+  _hud?.updatePlayerWeight(_playerWeight, _levelGoal);
+  _hud?.updateFillProgress(0.0);
+  _hud?.updateGameTimer(_timeLeft);
+
+  // Reset rod
+  _rod?.position = Vector2(-145, 71);
+  _rod?.angle = -0.8;
+
+  // Cancel old timer
   _countdownTimer?.cancel();
-  _countdownTimer = async.Timer.periodic(const Duration(seconds: 1), (timer) {
-    _timeLeft--;
-    _hud?.updateGameTimer(_timeLeft);
 
-    if (_timeLeft <= 0) {
-      timer.cancel();
-      _endGame();
-    }
-  });
-
-  print("🚀 Level $_currentLevel officially started after intro!");
+  // 💡 Restart game immediately
+  startGame();
 }
-Future<void> _triggerFishRainCelebrationLoop() async {
-  print("🎉 Level 5 reached goal! Fish rain starts looping!");
 
-  // Optional sound
-  FlameAudio.play('splash.wav');
 
-  // Loop the rain indefinitely
-  void spawnFish() async {
-    final fish = SpriteComponent(
-      sprite: await loadSprite('fish.png'),
-      size: Vector2(50, 40),
-      anchor: Anchor.center,
-      position: Vector2(
-        -500 + Random().nextDouble() * 1000,
-        -100 - Random().nextDouble() * 300,
-      ),
-    );
-
-    double fallDuration = 3 + Random().nextDouble() * 2;
-    double spinSpeed = (Random().nextBool() ? 1 : -1) * (1 + Random().nextDouble());
-
-    fish.add(
-      RotateEffect.by(
-        spinSpeed * pi * 2,
-        EffectController(duration: fallDuration, infinite: false),
-      ),
-    );
-
-    fish.add(
-      MoveEffect.by(
-        Vector2(0, 600),
-        EffectController(duration: fallDuration, infinite: false),
-      ),
-    );
-
-    _world.add(fish);
-
-    // Spawn next fish after a short delay
-    async.Timer(const Duration(milliseconds: 100), spawnFish); // faster spawn
-
+  Future<void> _triggerFishRainCelebrationLoop() async {
+    print("🎉 Level 5 reached goal! Fish rain starts looping!");
+    // Loop the rain indefinitely
+    void spawnFish() async {
+      final fish = SpriteComponent(
+        sprite: await loadSprite('fish.png'),
+        size: Vector2(50, 40),
+        anchor: Anchor.center,
+        position: Vector2(
+          -500 + Random().nextDouble() * 1000,
+          -100 - Random().nextDouble() * 300,
+        ),
+      );
+      double fallDuration = 3 + Random().nextDouble() * 2;
+      double spinSpeed = (Random().nextBool() ? 1 : -1) * (1 + Random().nextDouble());
+      FlameAudio.play(
+        'splash.wav',
+        volume: 0.2 + Random().nextDouble() * 0.2, // randomize volume a bit
+      );
+      fish.add(
+        RotateEffect.by(
+          spinSpeed * pi * 2,
+          EffectController(duration: fallDuration, infinite: false),
+        ),
+      );
+      fish.add(
+        MoveEffect.by(
+          Vector2(0, 600),
+          EffectController(duration: fallDuration, infinite: false),
+        ),
+      );
+      _world.add(fish);
+      async.Timer(
+        Duration(milliseconds: 80 + Random().nextInt(100)),
+        spawnFish,
+      );
+    }
+    // Start the loop
+    spawnFish();
+    // Show modal after 2 seconds
+    async.Timer(const Duration(seconds: 2), () {
+      overlays.add('FishRainModal');
+    });
   }
 
-  // Start the first fish
-  spawnFish();
-}
-
-
-
-  
+  void restartGameToLevel1() {
+    print("🔄 Restarting whole game to Level 1");
+    _currentLevel = 1;
+    _playerWeight = 0;
+    _timeLeft = 60;
+    _isGameRunning = false;
+    _isBobberActive = false;
+    _hud?.updatePlayerWeight(_playerWeight, _levelGoal);
+    _hud?.updateFillProgress(0.0);
+    _hud?.updateGameTimer(_timeLeft);
+    _rod?.position = Vector2(-145, 71);
+    _rod?.angle = -0.8;
+    _countdownTimer?.cancel();
+    overlays.clear();
+    overlays.add('StartMenu');
+  }
 }

@@ -39,104 +39,125 @@ class LevelIntroOverlay extends StatelessWidget {
               horizontal: 30,
               vertical: 35,
             ), // 🔧 reduced vertical padding
-            child: SingleChildScrollView(
-              // ✅ prevents overflow
-              physics:
-                  const NeverScrollableScrollPhysics(), // invisible scroll (no scrollbar)
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  // 🧭 Level Header
-                  Text(
-                    "LEVEL $level",
-                    textAlign: TextAlign.center,
-                    style: GoogleFonts.pressStart2p(
-                      fontSize: 14,
-                      color: const Color(0xFF4A2E16),
-                    ),
-                  ),
-                  const SizedBox(height: 10), // 🔧 reduced spacing
-                  // 🎣 Rod Preview
-                  Stack(
-                    alignment: Alignment.center,
-                    children: [
-                      Image.asset(
-                        'assets/images/RC.png',
-                        width: 200,
-                        height: 160, // 🔧 reduced from 180
-                        fit: BoxFit.contain,
-                        filterQuality: FilterQuality.none,
-                      ),
-                      Image.asset(
-                        'assets/images/$rodSprite',
-                        width: 120,
-                        fit: BoxFit.contain,
-                        filterQuality: FilterQuality.none,
-                      ),
-                    ],
-                  ),
+            child:  Column(
+  mainAxisSize: MainAxisSize.min,
+  mainAxisAlignment: MainAxisAlignment.center,
+  children: [
+    // 🧭 Level Header
+    Text(
+      "LEVEL $level",
+      textAlign: TextAlign.center,
+      style: GoogleFonts.pressStart2p(
+        fontSize: 14,
+        color: const Color(0xFF4A2E16),
+      ),
+    ),
+    const SizedBox(height: 8),
 
-                  const SizedBox(height: 8),
-                  Text(
-                    "Level $level Rod",
-                    style: GoogleFonts.pressStart2p(
-                      fontSize: 8,
-                      color: const Color(0xFF4A2E16),
-                    ),
-                  ),
+    // 🎣 Dynamic Rod Message
+    Text(
+      level == 1
+          ? "🎣 You obtained your first fishing rod!"
+          : "🎣 You obtained a new upgraded rod!",
+      textAlign: TextAlign.center,
+      style: GoogleFonts.pressStart2p(
+        fontSize: 8,
+        height: 1.4,
+        color: const Color(0xFF4A2E16),
+      ),
+    ),
 
-                  const SizedBox(height: 8),
-                  Text(
-                    "Catch Chance: $chance%",
-                    style: GoogleFonts.pressStart2p(
-                      fontSize: 8,
-                      color: const Color(0xFF4A2E16),
-                    ),
-                  ),
-                  Text(
-                    "Fish Range: $minW–$maxW kg",
-                    style: GoogleFonts.pressStart2p(
-                      fontSize: 8,
-                      color: const Color(0xFF4A2E16),
-                    ),
-                  ),
+    const SizedBox(height: 6),
 
-                  const SizedBox(height: 15), // 🔧 slightly less spacing
-                  // 🟤 Start Level Button
-                  ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF8B5E3C),
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 40,
-                        vertical: 12,
-                      ),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(6),
-                        side: const BorderSide(
-                          color: Color(0xFF3E2414),
-                          width: 3,
-                        ),
-                      ),
-                    ),
-                    onPressed: () {
-                      game.overlays.remove(
-                        'LevelIntroOverlay',
-                      ); // close overlay
-                      game.startLevelAfterIntro(); // ✅ start level safely
-                    },
-                    child: Text(
-                      "START LEVEL",
-                      style: GoogleFonts.pressStart2p(
-                        fontSize: 10,
-                        color: const Color(0xFFFFEBD2),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
+    // 🎣 Rod Preview Section (reduced size)
+    Stack(
+      alignment: Alignment.center,
+      children: [
+        Image.asset(
+          'assets/images/RC.png',
+          width: 160, // ⬅️ reduced from 200
+          height: 120, // ⬅️ reduced from 160
+          fit: BoxFit.contain,
+          filterQuality: FilterQuality.none,
+        ),
+        Image.asset(
+          'assets/images/$rodSprite',
+          width: 90, // ⬅️ reduced from 120
+          fit: BoxFit.contain,
+          filterQuality: FilterQuality.none,
+        ),
+      ],
+    ),
+
+    const SizedBox(height: 4),
+
+    // 🏷️ Label under the rod
+    Text(
+      "Level $level Rod",
+      style: GoogleFonts.pressStart2p(
+        fontSize: 9,
+        color: const Color(0xFF4A2E16),
+      ),
+    ),
+
+    const SizedBox(height: 6),
+
+    Text(
+      "Catch Chance: $chance%",
+      style: GoogleFonts.pressStart2p(
+        fontSize: 8,
+        color: const Color(0xFF4A2E16),
+      ),
+    ),
+    Text(
+      "Fish Range: $minW–$maxW kg",
+      style: GoogleFonts.pressStart2p(
+        fontSize: 8,
+        color: const Color(0xFF4A2E16),
+      ),
+    ),
+    Text(
+      "Target: ${game.levelGoals[level] ?? 0} kg",
+      style: GoogleFonts.pressStart2p(
+        fontSize: 8,
+        color: const Color(0xFF4A2E16),
+      ),
+    ),
+
+    const SizedBox(height: 10),
+
+    // 🟤 Start Level Button
+    ElevatedButton(
+      style: ElevatedButton.styleFrom(
+        backgroundColor: const Color(0xFF8B5E3C),
+        padding: const EdgeInsets.symmetric(
+          horizontal: 35,
+          vertical: 10,
+        ),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(6),
+          side: const BorderSide(
+            color: Color(0xFF3E2414),
+            width: 3,
           ),
+        ),
+      ),
+      onPressed: () {
+        game.overlays.remove('LevelIntroOverlay');
+        game.startLevelAfterIntro();
+      },
+      child: Text(
+        "START LEVEL",
+        style: GoogleFonts.pressStart2p(
+          fontSize: 10,
+          color: const Color(0xFFFFEBD2),
+        ),
+      ),
+    ),
+  ],
+)
+
+            ),
         ],
       ),
     );
