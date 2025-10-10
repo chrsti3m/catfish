@@ -89,6 +89,9 @@ class CatFish extends FlameGame with HasCollisionDetection {
   bool _isGameRunning = false;
   bool _audioInitialized = false;
 
+    
+
+
   bool get isGameRunning => _isGameRunning;
 
 void pauseGameForOverlay() {
@@ -181,6 +184,9 @@ void resumeGame() {
     // ✅ Show Start overlay at beginning
     overlays.add('StartMenu');
   }
+  // 🐟 Fish rain state tracking
+  final List<async.Timer> _fishRainTimers = [];
+  bool _isFishRainActive = false;
   
 
   @override
@@ -515,6 +521,8 @@ void resumeGame() {
     _currentLevel++;
 
     await _loadRodForLevel(_currentLevel);
+    _hud?.updateLevelTitle(_currentLevel);
+
 
     // Reset HUD visuals
     _hud?.updatePlayerWeight(_playerWeight, _levelGoal);
@@ -575,7 +583,9 @@ void resumeGame() {
 
     print("🚀 Level $_currentLevel officially started after intro!");
   }
-  void restartCurrentLevel() {
+  void restartCurrentLevel() async {
+     _stopFishRain(); // 🧼 stop fish rain immediately
+  await Future.delayed(const Duration(milliseconds: 200));
   print("🔁 Restarting Level $_currentLevel...");
 
   // Reset basic game state
@@ -602,53 +612,91 @@ void resumeGame() {
 
 
   Future<void> _triggerFishRainCelebrationLoop() async {
-    print("🎉 Level 5 reached goal! Fish rain starts looping!");
-    // Loop the rain indefinitely
-    void spawnFish() async {
-      final fish = SpriteComponent(
-        sprite: await loadSprite('fish.png'),
-        size: Vector2(50, 40),
-        anchor: Anchor.center,
-        position: Vector2(
-          -500 + Random().nextDouble() * 1000,
-          -100 - Random().nextDouble() * 300,
-        ),
-      );
-      double fallDuration = 3 + Random().nextDouble() * 2;
-      double spinSpeed = (Random().nextBool() ? 1 : -1) * (1 + Random().nextDouble());
-      FlameAudio.play(
-        'splash.wav',
-        volume: 0.2 + Random().nextDouble() * 0.2, // randomize volume a bit
-      );
-      fish.add(
-        RotateEffect.by(
-          spinSpeed * pi * 2,
-          EffectController(duration: fallDuration, infinite: false),
-        ),
-      );
-      fish.add(
-        MoveEffect.by(
-          Vector2(0, 600),
-          EffectController(duration: fallDuration, infinite: false),
-        ),
-      );
-      _world.add(fish);
-      async.Timer(
-        Duration(milliseconds: 80 + Random().nextInt(100)),
-        spawnFish,
-      );
-    }
-    // Start the loop
-    spawnFish();
-    // Show modal after 2 seconds
-    async.Timer(const Duration(seconds: 2), () {
-      overlays.add('FishRainModal');
-    });
+  print("🎉 Level 5 reached goal! Fish rain starts looping!");
+  _isFishRainActive = true;
+
+  void spawnFish() async {
+    if (!_isFishRainActive) return; // Stop spawning if reset
+
+    final fish = SpriteComponent(
+      sprite: await loadSprite('fish.png'),
+      size: Vector2(50, 40),
+      anchor: Anchor.center,
+      position: Vector2(
+        -500 + Random().nextDouble() * 1000,
+        -100 - Random().nextDouble() * 300,
+      ),
+    );
+
+    double fallDuration = 3 + Random().nextDouble() * 2;
+    double spinSpeed = (Random().nextBool() ? 1 : -1) * (1 + Random().nextDouble());
+
+    FlameAudio.play('splash.wav', volume: 0.2 + Random().nextDouble() * 0.2);
+
+    fish.addAll([
+      RotateEffect.by(
+        spinSpeed * pi * 2,
+        EffectController(duration: fallDuration),
+      ),
+      MoveEffect.by(
+        Vector2(0, 600),
+        EffectController(duration: fallDuration),
+      ),
+    ]);
+
+    _world.add(fish);
+
+    // Schedule next fish and store the timer
+    final nextTimer = async.Timer(
+      Duration(milliseconds: 80 + Random().nextInt(100)),
+      spawnFish,
+    );
+    _fishRainTimers.add(nextTimer);
   }
 
-  void restartGameToLevel1() {
+  // Start spawning loop
+  spawnFish();
+
+  // Show Fish Rain Modal after 2 seconds
+  final modalTimer = async.Timer(const Duration(seconds: 2), () {
+    if (_isFishRainActive) overlays.add('FishRainModal');
+  });
+  _fishRainTimers.add(modalTimer);
+}
+
+
+void _stopFishRain() {
+  print("🛑 Stopping fish rain...");
+  _isFishRainActive = false;
+
+  // Cancel all active timers immediately
+  for (final timer in _fishRainTimers) {
+    if (timer.isActive) timer.cancel();
+  }
+  _fishRainTimers.clear();
+
+  // Immediately remove any fish components from the world
+  final fishToRemove = _world.children.whereType<SpriteComponent>().where((c) {
+    // Safer identification: check position or size range typical for falling fish
+    return c.size.y == 40 && c.size.x == 50; // matches your fish size
+  }).toList();
+
+  for (final fish in fishToRemove) {
+    fish.removeFromParent(); // immediate removal
+  }
+
+  // Remove fish rain overlay if active
+  if (overlays.isActive('FishRainModal')) overlays.remove('FishRainModal');
+}
+
+
+
+  void restartGameToLevel1() async {
+    _stopFishRain();
+    await Future.delayed(const Duration(milliseconds: 200));
     print("🔄 Restarting whole game to Level 1");
     _currentLevel = 1;
+    _hud?.updateLevelTitle(_currentLevel);
     _playerWeight = 0;
     _timeLeft = 60;
     _isGameRunning = false;

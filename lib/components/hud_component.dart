@@ -7,6 +7,8 @@ class HudComponent extends PositionComponent {
   late TextComponent _weightText;
   late TextComponent _timerText;
   late RectangleComponent _fillBar;
+  late TextComponent _levelText;
+
 
   int _goalWeight = 10; // default goal
   int _currentWeight = 0;
@@ -42,6 +44,28 @@ class HudComponent extends PositionComponent {
       position: Vector2(hudX, hudY),
     );
     add(woodBorder);
+    // 🪧 LEVEL TITLE HEADER (Top Center of Screen)
+// 🪧 LEVEL TITLE HEADER (Same line as HUD, but centered on screen)
+_levelText = TextComponent(
+  text: 'LEVEL 1',
+  textRenderer: TextPaint(
+    style: GoogleFonts.pressStart2p(
+      color: const Color(0xFFFFFD8D),
+      fontSize: 12,
+      height: 1.2,
+      shadows: const [
+        Shadow(color: Colors.black, offset: Offset(0, 2), blurRadius: 0),
+        Shadow(color: Colors.black, offset: Offset(0, -2), blurRadius: 0),
+        Shadow(color: Colors.black, offset: Offset(2, 0), blurRadius: 0),
+        Shadow(color: Colors.black, offset: Offset(-2, 0), blurRadius: 0),
+      ],
+    ),
+  ),
+  anchor: Anchor.center,
+  position: Vector2(0, hudY + hudHeight / 2), // ✅ Centered horizontally, same vertical line as HUD
+);
+add(_levelText);
+
 
     // Grain lines
     add(RectangleComponent(
@@ -180,4 +204,10 @@ class HudComponent extends PositionComponent {
     final maxFillWidth = progressBarWidth - leftOffset - rightBuffer;
     _fillBar.size.x = maxFillWidth * progress.clamp(0.0, 1.0);
   }
+
+  /// Updates the level title
+void updateLevelTitle(int levelNumber) {
+  _levelText.text = 'LEVEL $levelNumber';
+}
+
 }

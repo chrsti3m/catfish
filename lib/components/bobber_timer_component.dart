@@ -12,7 +12,7 @@ class BobberTimerComponent extends PositionComponent {
     ..style = PaintingStyle.stroke
     ..isAntiAlias = true
     ..strokeCap = StrokeCap.round;
-  double radius = 16;
+  double radius = 19;
 
   BobberTimerComponent({
     required this.totalTime,
@@ -21,38 +21,50 @@ class BobberTimerComponent extends PositionComponent {
     this.speedMultiplier = 1.0,
   }) : super(size: Vector2.all(40), anchor: Anchor.center);
 
-  @override
+ @override
 void render(Canvas canvas) {
   super.render(canvas);
 
-  baseSprite?.render(canvas, size: size);
+  // Ensure the sprite exists before rendering
+  if (baseSprite == null) return;
 
   double progress = remainingTime / totalTime;
   double sweepAngle = 2 * math.pi * progress;
 
+  // Bright neon colors
   Color color;
   if (progress > 0.6) {
-    color = Colors.green;
+    color = const Color(0xFF00FF7F); // bright neon green
   } else if (progress > 0.3) {
-    color = Colors.orange;
+    color = const Color(0xFFFFD700); // bright gold
   } else {
-    color = Colors.red;
+    color = const Color(0xFFFF4C4C); // bright red
   }
 
-  arcPaint
-    ..color = color.withOpacity(0.8)
-    ..style = PaintingStyle.fill; // ✅ fill instead of stroke
-  // remove strokeWidth
+  // Save the layer to apply masking
+  canvas.saveLayer(Rect.fromLTWH(0, 0, size.x, size.y), Paint());
 
-  // Draw the countdown filling
+  // Step 1: Draw the base pixelated pie
+  baseSprite!.render(canvas, size: size);
+
+  // Step 2: Overlay color fill using SRC_IN mode to mask inside sprite
+  final fillPaint = Paint()
+    ..color = color.withOpacity(0.95)
+    ..blendMode = BlendMode.srcIn; // ✅ Only colors inside the sprite's alpha
+
+  // Step 3: Draw a pie-shaped filled region to match progress
   canvas.drawArc(
     Rect.fromCircle(center: Offset(size.x / 2, size.y / 2), radius: radius),
     -math.pi / 2,
     sweepAngle,
-    true, // ✅ fill inside
-    arcPaint,
+    true,
+    fillPaint,
   );
+
+  // Step 4: Restore canvas
+  canvas.restore();
 }
+
 
 
   @override
