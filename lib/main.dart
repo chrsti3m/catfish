@@ -33,7 +33,7 @@ void main() async {
                 'StartMenu': (BuildContext context, CatFish game) => StartMenu(game: game),
                 'FailMenu': (BuildContext context, CatFish game) => FailMenu(game: game),
                 'LevelIntroOverlay': (BuildContext context, CatFish game) =>
-                    LevelIntroOverlay(game: game, level: game.currentLevel),
+                    LevelIntroOverlay(game: game, level: game.currentLevel, isResetMode: game.isLevelIntroOverlayResetMode ?? false),
                 'NextLevelMenu': (BuildContext context, CatFish game) =>
                     NextLevelMenu(game: game),
                 'FishRainModal': (BuildContext context, CatFish game) => FishRainModal(game: game),

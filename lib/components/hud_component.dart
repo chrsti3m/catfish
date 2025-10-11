@@ -2,12 +2,17 @@ import 'package:flame/components.dart';
 import 'package:flame/extensions.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../cat_fish.dart';
+import 'package:flame/events.dart';
 
 class HudComponent extends PositionComponent {
+  final CatFish gameRef;
+  HudComponent({required this.gameRef});
   late TextComponent _weightText;
   late TextComponent _timerText;
   late RectangleComponent _fillBar;
   late TextComponent _levelText;
+  late SpriteComponent _settingsButton;
 
 
   int _goalWeight = 10; // default goal
@@ -153,7 +158,7 @@ add(_levelText);
     );
     add(_weightText);
 
-    // Timer
+    // Timer (restore to original HUD inner right edge)
     _timerText = TextComponent(
       text: '1:00',
       textRenderer: TextPaint(
@@ -173,6 +178,18 @@ add(_levelText);
       position: Vector2(hudX + hudWidth - 20, hudY + hudHeight / 2),
     );
     add(_timerText);
+
+    // SETTINGS BUTTON (at far right edge of game window)
+    const gameWidth = 1024.0;
+    _settingsButton = _SettingsButtonComponent(
+      position: Vector2((gameWidth/2) - 20, hudY + hudHeight / 2),
+      size: Vector2(32, 32),
+      anchor: Anchor.centerRight,
+      onTap: () {
+        gameRef.pauseGameForOverlay(resetMode: true);
+      },
+    );
+    add(_settingsButton);
   }
 
  /// Updates HUD with new weight
@@ -210,4 +227,26 @@ void updateLevelTitle(int levelNumber) {
   _levelText.text = 'LEVEL $levelNumber';
 }
 
+}
+
+class _SettingsButtonComponent extends SpriteComponent with TapCallbacks {
+  final void Function() onTap;
+
+  _SettingsButtonComponent({
+    required Vector2 position,
+    required Vector2 size,
+    required Anchor anchor,
+    required this.onTap,
+  }) : super(position: position, size: size, anchor: anchor);
+
+  @override
+  Future<void> onLoad() async {
+    await super.onLoad();
+    sprite = await Sprite.load('set.png');
+  }
+
+  @override
+  void onTapDown(TapDownEvent event) {
+    onTap();
+  }
 }

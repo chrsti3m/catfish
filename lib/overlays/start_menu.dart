@@ -139,7 +139,7 @@ class StartMenu extends StatelessWidget {
                     child: InkWell(
                       onTap: () {
                         game.overlays.remove('StartMenu');
-
+                        game.isLevelIntroOverlayResetMode = false;
                         // 🆕 Show level intro overlay instead of starting immediately
                         game.overlays.add('LevelIntroOverlay');
                       },

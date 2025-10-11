@@ -19,6 +19,9 @@ class CatFish extends FlameGame with HasCollisionDetection {
   HudComponent? _hud;
   ShadowComponent? _persistentShadow;
   ShadowComponent? _bonusShadow; //  Extra high-chance shadow
+  bool? isLevelIntroOverlayResetMode = false;
+
+  CameraComponent get cameraComponent => _camera;
 
   SpriteComponent? _rod; // ✅ keep rod as a field
 
@@ -94,19 +97,22 @@ class CatFish extends FlameGame with HasCollisionDetection {
 
   bool get isGameRunning => _isGameRunning;
 
-void pauseGameForOverlay() {
-  if (!_isGameRunning) return;
+void pauseGameForOverlay({bool resetMode = false}) {
+  if (!_isGameRunning && !resetMode) return;
 
   _countdownTimer?.cancel();
   _isGameRunning = false;
 
+  isLevelIntroOverlayResetMode = resetMode;
   overlays.add('LevelIntroOverlay');
   print("⏸️ Game paused, showing overlay");
+  // Store resetMode somewhere (or contextually in overlay)
 }
 
 void resumeGame() {
   if (_isGameRunning) return;
 
+  isLevelIntroOverlayResetMode = false;
   _isGameRunning = true;
 
   _countdownTimer = async.Timer.periodic(const Duration(seconds: 1), (timer) {
@@ -175,7 +181,7 @@ void resumeGame() {
     await _createBonusShadow(); //  Lucky shadow
 
     // HUD
-    _hud = HudComponent();
+    _hud = HudComponent(gameRef: this);
     _world.add(_hud!);
 
   
@@ -567,6 +573,7 @@ void resumeGame() {
   }
 
   void startLevelAfterIntro() {
+    isLevelIntroOverlayResetMode = false;
     _isGameRunning = true;
     _timeLeft = 60;
     _initializeAudioIfNeeded();
@@ -696,6 +703,7 @@ void _stopFishRain() {
     await Future.delayed(const Duration(milliseconds: 200));
     print("🔄 Restarting whole game to Level 1");
     _currentLevel = 1;
+    await _loadRodForLevel(_currentLevel); // <-- Ensure rod resets to Level 1
     _hud?.updateLevelTitle(_currentLevel);
     _playerWeight = 0;
     _timeLeft = 60;
@@ -708,6 +716,7 @@ void _stopFishRain() {
     _rod?.angle = -0.8;
     _countdownTimer?.cancel();
     overlays.clear();
+    isLevelIntroOverlayResetMode = false;
     overlays.add('StartMenu');
   }
 }

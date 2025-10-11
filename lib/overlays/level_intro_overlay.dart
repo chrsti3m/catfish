@@ -5,8 +5,9 @@ import '../cat_fish.dart';
 class LevelIntroOverlay extends StatelessWidget {
   final CatFish game;
   final int level;
+  final bool isResetMode;
 
-  const LevelIntroOverlay({super.key, required this.game, required this.level});
+  const LevelIntroOverlay({super.key, required this.game, required this.level, required this.isResetMode});
 
   @override
   Widget build(BuildContext context) {
@@ -30,6 +31,27 @@ class LevelIntroOverlay extends StatelessWidget {
             height: 408,
             fit: BoxFit.contain,
             filterQuality: FilterQuality.none,
+          ),
+
+          // Close Button (top-right corner over container, not dialog)
+          Positioned(
+            top: 19,
+            right: 15,
+            child: GestureDetector(
+              onTap: () {
+                game.overlays.remove('LevelIntroOverlay');
+                if (isResetMode) {
+                  game.resumeGame();
+                } else {
+                  game.startLevelAfterIntro();
+                }
+              },
+              child: SizedBox(
+                width: 32,
+                height: 32,
+                child: Image.asset('assets/images/xbutton.png', fit: BoxFit.contain, filterQuality: FilterQuality.none),
+              ),
+            ),
           ),
 
           // 📜 content
@@ -143,11 +165,16 @@ class LevelIntroOverlay extends StatelessWidget {
         ),
       ),
       onPressed: () {
-        game.overlays.remove('LevelIntroOverlay');
-        game.startLevelAfterIntro();
+        if (isResetMode) {
+          game.restartGameToLevel1();
+          // overlays logic inside restartGameToLevel1, no need to duplicate
+        } else {
+          game.overlays.remove('LevelIntroOverlay');
+          game.startLevelAfterIntro();
+        }
       },
       child: Text(
-        "START LEVEL",
+        isResetMode ? "RESET GAME" : "START LEVEL",
         style: GoogleFonts.pressStart2p(
           fontSize: 10,
           color: const Color(0xFFFFEBD2),
