@@ -1,6 +1,6 @@
 # Cat Fish
 
-A 2D mobile fishing game built with Flutter and the Flame engine — an academic project that broke from the usual web-based e-commerce mold.
+A 2D mobile fishing game built with Flutter and the Flame engine.
 
 ## About
 
