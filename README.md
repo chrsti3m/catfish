@@ -1,16 +1,32 @@
-# cat_fish
+# Cat Fish
 
-A new Flutter project.
+A 2D mobile fishing game built with Flutter and the Flame engine — an academic project that broke from the usual web-based e-commerce mold.
+
+## About
+
+Cat Fish is a 2D fishing game featuring:
+- Custom gameplay mechanics
+- Sprite-based assets and animations
+- In-game audio
+
+## Tech Stack
+
+- **Framework**: Flutter
+- **Language**: Dart
+- **Game Engine**: [Flame](https://flame-engine.org/)
 
 ## Getting Started
 
-This project is a starting point for a Flutter application.
+This project is a Flutter application. To run it locally:
 
-A few resources to get you started if this is your first Flutter project:
+1. Make sure you have [Flutter installed](https://docs.flutter.dev/get-started/install)
+2. Clone this repo
+3. Run `flutter pub get` to install dependencies
+4. Run `flutter run` to launch the app
+
+### Resources
 
 - [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
 - [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
-
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+- [Flutter documentation](https://docs.flutter.dev/)
+- [Flame engine docs](https://docs.flame-engine.org/)
